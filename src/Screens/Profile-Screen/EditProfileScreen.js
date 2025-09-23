@@ -12,7 +12,8 @@ import {
     Animated,
     Alert,
     PermissionsAndroid,
-    Platform
+    Platform,
+    SafeAreaView
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -225,21 +226,16 @@ const EditProfileScreen = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
-            <StatusBar backgroundColor="#1e3a8a" barStyle="light-content" />
-            <LinearGradient
-                colors={['#1e3a8a', '#1e40af', '#3b82f6']}
-                style={styles.background}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-            />
+        <SafeAreaView style={styles.container}>
+            <StatusBar backgroundColor="#f8fafc" barStyle="dark-content" />
 
+            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
                     style={styles.backButton}
                 >
-                    <Icon name="arrow-back" size={24} color="#ffffff" />
+                    <Icon name="arrow-back" size={24} color="#1e293b" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Profile</Text>
                 <View style={styles.headerRight} />
@@ -372,54 +368,63 @@ const EditProfileScreen = ({ navigation, route }) => {
                 onClose={hideModal}
                 navigation={navigation}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    background: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
+        backgroundColor: '#f8fafc',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingTop: Platform.OS === 'ios' ? 10 : 30,
         paddingBottom: 20,
+        backgroundColor: '#ffffff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e2e8f0',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        marginTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,
     },
     backButton: {
         padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#f1f5f9',
     },
     headerTitle: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#ffffff',
+        color: '#1e293b',
     },
     headerRight: {
         width: 40,
     },
     scrollContainer: {
         flexGrow: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         paddingTop: 20,
         paddingBottom: 40,
     },
     formContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: '#ffffff',
         borderRadius: 20,
         padding: 25,
         marginBottom: 30,
-        elevation: 10,
+        elevation: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
     inputContainer: {
         marginBottom: 18,

@@ -26,6 +26,8 @@ import FastImage from 'react-native-fast-image';
 const ProfileScreen = ({ navigation }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(-30)).current;
+    const cardAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+    const floatingAnim = useRef(new Animated.Value(0)).current;
     const [qrCodeUri, setQrCodeUri] = useState('');
     const dispatch = useDispatch();
 
@@ -46,27 +48,53 @@ const ProfileScreen = ({ navigation }) => {
         uniCardImageUrl = null,
     } = profile?.user || {};
 
-
     useEffect(() => {
         startAnimations();
         generateQRCode();
+        startContinuousAnimations();
     }, []);
 
     const startAnimations = () => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 800,
+                duration: 1200,
                 useNativeDriver: true,
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
-                duration: 600,
+                duration: 800,
                 useNativeDriver: true,
             }),
         ]).start();
+
+        cardAnimations.forEach((anim, index) => {
+            Animated.spring(anim, {
+                toValue: 1,
+                delay: 400 + index * 150,
+                tension: 60,
+                friction: 8,
+                useNativeDriver: true,
+            }).start();
+        });
     };
 
+    const startContinuousAnimations = () => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(floatingAnim, {
+                    toValue: 1,
+                    duration: 3000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(floatingAnim, {
+                    toValue: 0,
+                    duration: 3000,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    };
 
     const generateQRCode = () => {
         try {
@@ -132,105 +160,152 @@ const ProfileScreen = ({ navigation }) => {
         }
     };
 
+    const floatingTransform = {
+        transform: [{
+            translateY: floatingAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, -10],
+            })
+        }]
+    };
 
+    const renderSection = (content, index) => {
+        const animatedStyle = {
+            opacity: cardAnimations[index],
+            transform: [
+                {
+                    translateY: cardAnimations[index].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [50, 0],
+                    })
+                }
+            ]
+        };
+
+        return (
+            <Animated.View style={animatedStyle}>
+                {content}
+            </Animated.View>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar backgroundColor="#1e3a8a" barStyle="light-content" />
+            <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
 
-            <View style={styles.headerSection}>
-                <LinearGradient
-                    colors={['#1e3a8a', '#1e40af', '#3b82f6']}
-                    style={styles.headerGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
+            {/* Background Gradient */}
+            <LinearGradient
+                colors={['#1e3a8a', '#1e40af', '#3b82f6']}
+                style={styles.backgroundGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
 
-                <Animated.View
-                    style={[
-                        styles.headerContent,
-                        {
-                            opacity: fadeAnim,
-                            transform: [{ translateY: slideAnim }]
-                        }
-                    ]}
-                >
-                    <View style={styles.headerTop}>
-                        <TouchableOpacity
-                            onPress={() => navigation.goBack()}
-                            style={styles.backButton}
-                        >
-                            <Icon name="arrow-back" size={24} color="#ffffff" />
-                        </TouchableOpacity>
+            {/* Floating Elements */}
+            <Animated.View style={[styles.floatingElement, styles.floatingElement1, floatingTransform]} />
+            <Animated.View style={[styles.floatingElement, styles.floatingElement2,
+            {
+                transform: [{
+                    translateY: floatingAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 15],
+                    })
+                }]
+            }
+            ]} />
 
-                        <Text style={styles.headerTitle}>My Profile</Text>
-
-                        <View style={styles.headerRightButtons}>
-                            <TouchableOpacity
-                                onPress={handleEditProfile}
-                                style={styles.editButton}
-                            >
-                                <Icon name="edit" size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={handleLogout}
-                                style={styles.logoutButton}
-                            >
-                                <Icon name="logout" size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Animated.View>
-            </View>
-            <View style={{ flex: 1 }}>
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Animated.View
-                        style={[
-                            styles.profileCard,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{ translateY: slideAnim }]
-                            }
-                        ]}
+            {/* Header */}
+            <Animated.View
+                style={[
+                    styles.header,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                    }
+                ]}
+            >
+                <View style={styles.headerContainer}>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
                     >
-                        <View style={styles.profileHeader}>
-                            <View style={styles.profileImageContainer}>
-                                {profileImageUrl ? (
-                                    <FastImage
-                                        source={{ uri: profileImageUrl }}
-                                        style={styles.profileImage}
-                                    />
-                                ) : (
-                                    <View style={styles.defaultProfileImage}>
-                                        <Icon name="person" size={50} color="#64748b" />
-                                    </View>
-                                )}
-                            </View>
+                        <Icon name="arrow-back" size={24} color="#ffffff" />
+                    </TouchableOpacity>
 
-                            <View style={styles.profileInfo}>
-                                <Text style={styles.fullName}>{fullName}</Text>
-                                <Text style={styles.studentId}>{uniId}</Text>
-                                <Text style={styles.email}>{email}</Text>
-                            </View>
-                        </View>
-                    </Animated.View>
+                    <Text style={styles.headerTitle}>My Profile</Text>
 
-                    {uniCardImageUrl && (
-                        <Animated.View
-                            style={[
-                                styles.uniCardSection,
-                                {
-                                    opacity: fadeAnim,
-                                    transform: [{ translateY: slideAnim }]
-                                }
-                            ]}
+                    <View style={styles.headerRightButtons}>
+                        <TouchableOpacity
+                            onPress={handleEditProfile}
+                            style={styles.editButton}
+                        >
+                            <Icon name="edit" size={24} color="#ffffff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={handleLogout}
+                            style={styles.logoutButton}
+                        >
+                            <Icon name="logout" size={24} color="#ffffff" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Animated.View>
+
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Profile Card */}
+                {renderSection(
+                    <View style={styles.profileCard}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.90)']}
+                            style={styles.profileCardGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <View style={styles.profileHeader}>
+                                <View style={styles.profileImageContainer}>
+                                    {profileImageUrl ? (
+                                        <FastImage
+                                            source={{ uri: profileImageUrl }}
+                                            style={styles.profileImage}
+                                        />
+                                    ) : (
+                                        <View style={styles.defaultProfileImage}>
+                                            <Icon name="person" size={50} color="#64748b" />
+                                        </View>
+                                    )}
+                                </View>
+
+                                <View style={styles.profileInfo}>
+                                    <Text style={styles.fullName}>{fullName}</Text>
+                                    <Text style={styles.studentId}>{uniId}</Text>
+                                    <Text style={styles.email}>{email}</Text>
+                                </View>
+                            </View>
+                        </LinearGradient>
+                    </View>,
+                    0
+                )}
+
+                {/* University Card Section */}
+                {uniCardImageUrl && renderSection(
+                    <View style={styles.uniCardSection}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.90)']}
+                            style={styles.sectionGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
                         >
                             <View style={styles.sectionHeader}>
-                                <Icon name="credit-card" size={24} color="#1e3a8a" />
+                                <LinearGradient
+                                    colors={['#1e3a8a', '#3b82f6']}
+                                    style={styles.sectionIconContainer}
+                                >
+                                    <Icon name="credit-card" size={20} color="#ffffff" />
+                                </LinearGradient>
                                 <Text style={styles.sectionTitle}>University Card</Text>
                             </View>
                             <View style={styles.cardContainer}>
@@ -240,72 +315,87 @@ const ProfileScreen = ({ navigation }) => {
                                     resizeMode="cover"
                                 />
                             </View>
-                        </Animated.View>
-                    )}
+                        </LinearGradient>
+                    </View>,
+                    1
+                )}
 
-                    <Animated.View
-                        style={[
-                            styles.digitalIdSection,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{ translateY: slideAnim }]
-                            }
-                        ]}
-                    >
-                        <View style={styles.sectionHeader}>
-                            <Icon name="qr-code" size={24} color="#1e3a8a" />
-                            <Text style={styles.sectionTitle}>Digital Student ID</Text>
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.qrContainer}
-                            onPress={handleShowQRCode}
+                {/* Digital ID Section */}
+                {renderSection(
+                    <View style={styles.digitalIdSection}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.90)']}
+                            style={styles.sectionGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
                         >
-                            <LinearGradient
-                                colors={['#ffffff', '#f8fafc']}
-                                style={styles.qrCodeBackground}
+                            <View style={styles.sectionHeader}>
+                                <LinearGradient
+                                    colors={['#1e3a8a', '#3b82f6']}
+                                    style={styles.sectionIconContainer}
+                                >
+                                    <Icon name="qr-code" size={20} color="#ffffff" />
+                                </LinearGradient>
+                                <Text style={styles.sectionTitle}>Digital Student ID</Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.qrContainer}
+                                onPress={handleShowQRCode}
                             >
-                                {qrCodeUri ? (
-                                    <FastImage
-                                        source={{ uri: qrCodeUri }}
-                                        style={styles.qrCodeImage}
-                                    />
-                                ) : (
-                                    <View style={styles.qrCodePlaceholder}>
-                                        <Icon name="qr-code" size={80} color="#64748b" />
-                                        <Text style={styles.qrCodeText}>Generating QR Code...</Text>
-                                    </View>
-                                )}
-                            </LinearGradient>
+                                <View style={styles.qrCodeBackground}>
+                                    {qrCodeUri ? (
+                                        <FastImage
+                                            source={{ uri: qrCodeUri }}
+                                            style={styles.qrCodeImage}
+                                        />
+                                    ) : (
+                                        <View style={styles.qrCodePlaceholder}>
+                                            <Icon name="qr-code" size={80} color="#64748b" />
+                                            <Text style={styles.qrCodeText}>Generating QR Code...</Text>
+                                        </View>
+                                    )}
+                                </View>
 
-                            <View style={styles.qrInfo}>
-                                <Text style={styles.qrTitle}>Scan for Verification</Text>
-                                <Text style={styles.qrSubtitle}>
-                                    Contains student ID, name, and email for official verification
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    </Animated.View>
+                                <View style={styles.qrInfo}>
+                                    <Text style={styles.qrTitle}>Scan for Verification</Text>
+                                    <Text style={styles.qrSubtitle}>
+                                        Contains student ID, name, and email for official verification
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </LinearGradient>
+                    </View>,
+                    2
+                )}
 
-                    <Animated.View
-                        style={[
-                            styles.universitySection,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{ translateY: slideAnim }]
-                            }
-                        ]}
-                    >
-                        <View style={styles.universityInfo}>
-                            <Icon name="school" size={32} color="#1e3a8a" />
-                            <View style={styles.universityText}>
-                                <Text style={styles.universityName}>University of Punjab</Text>
-                                <Text style={styles.universityTagline}>Excellence in Education</Text>
+                {/* University Section */}
+                {renderSection(
+                    <View style={styles.universitySection}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.90)']}
+                            style={styles.sectionGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <View style={styles.universityInfo}>
+                                <LinearGradient
+                                    colors={['#1e3a8a', '#3b82f6']}
+                                    style={styles.universityIconContainer}
+                                >
+                                    <Icon name="school" size={24} color="#ffffff" />
+                                </LinearGradient>
+                                <View style={styles.universityText}>
+                                    <Text style={styles.universityName}>University of Punjab</Text>
+                                    <Text style={styles.universityTagline}>Excellence in Education</Text>
+                                </View>
                             </View>
-                        </View>
-                    </Animated.View>
-                </ScrollView>
-            </View>
+                        </LinearGradient>
+                    </View>,
+                    3
+                )}
+            </ScrollView>
+
             <Loader visible={isLoading} />
         </SafeAreaView>
     );
@@ -314,30 +404,62 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
     },
-    headerSection: {
-        height: 120,
-        position: 'relative',
-    },
-    headerGradient: {
+    backgroundGradient: {
         position: 'absolute',
-        width: '100%',
-        height: '100%',
+        width: width * 1.5,
+        height: height * 1.5,
+        top: -height * 0.25,
+        left: -width * 0.25,
     },
-    headerContent: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 20 : 40,
-        justifyContent: 'center',
+    floatingElement: {
+        position: 'absolute',
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 100,
     },
-    headerTop: {
+    floatingElement1: {
+        width: 120,
+        height: 120,
+        top: height * 0.15,
+        right: -30,
+    },
+    floatingElement2: {
+        width: 80,
+        height: 80,
+        top: height * 0.6,
+        left: -20,
+    },
+    header: {
+        marginTop: Platform.OS === 'ios' ? 50 : 40,
+        marginHorizontal: 20,
+        marginBottom: 10,
+    },
+    headerContainer: {
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: 25,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.15,
+                shadowRadius: 15,
+            },
+        }),
     },
     backButton: {
-        padding: 8,
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
     },
     headerTitle: {
         fontSize: 20,
@@ -359,19 +481,30 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 120,
+        paddingBottom: 140,
+        paddingHorizontal: 20,
     },
     profileCard: {
-        backgroundColor: '#ffffff',
-        marginHorizontal: 16,
-        marginTop: -20,
-        borderRadius: 16,
+        borderRadius: 22,
+        marginBottom: 18,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
+    },
+    profileCardGradient: {
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         padding: 24,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
     },
     profileHeader: {
         alignItems: 'center',
@@ -418,27 +551,76 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     uniCardSection: {
-        backgroundColor: '#ffffff',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 16,
+        borderRadius: 22,
+        marginBottom: 18,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
+    },
+    digitalIdSection: {
+        borderRadius: 22,
+        marginBottom: 18,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
+    },
+    universitySection: {
+        borderRadius: 22,
+        marginBottom: 18,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
+    },
+    sectionGradient: {
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         padding: 20,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
     },
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 16,
     },
+    sectionIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
     sectionTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: '#1e293b',
-        marginLeft: 12,
     },
     cardContainer: {
         borderRadius: 12,
@@ -453,18 +635,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 200,
     },
-    digitalIdSection: {
-        backgroundColor: '#ffffff',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 16,
-        padding: 20,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
     qrContainer: {
         alignItems: 'center',
     },
@@ -476,6 +646,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         borderWidth: 2,
         borderColor: '#1e3a8a',
+        backgroundColor: '#ffffff',
     },
     qrCodeImage: {
         width: 200,
@@ -507,24 +678,19 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 20,
     },
-    universitySection: {
-        backgroundColor: '#ffffff',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 16,
-        padding: 24,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
     universityInfo: {
         flexDirection: 'row',
         alignItems: 'center',
     },
+    universityIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
     universityText: {
-        marginLeft: 16,
         flex: 1,
     },
     universityName: {

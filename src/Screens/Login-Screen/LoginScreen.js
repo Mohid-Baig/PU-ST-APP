@@ -135,7 +135,7 @@ const LoginScreen = ({ navigation }) => {
 
 
     const openPortfolio = () => {
-        Linking.openURL('https://mohid-baig.vercel.app/').catch(err => {
+        Linking.openURL('https://mohidbaig.vercel.app/').catch(err => {
             showError('Could not open link. Please try again later.');
         });
     };
