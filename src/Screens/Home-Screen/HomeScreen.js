@@ -12,11 +12,14 @@ import {
     Platform,
     Easing,
     Pressable,
+    Alert
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from "react-redux";
-
+import messaging from '@react-native-firebase/messaging';
+import { requestUserPermission, getFcmToken } from '../../Components/notifications/firebaseMessaging';
+import { usePostfcmtokenMutation } from '../../Redux/apiSlice';
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
@@ -29,7 +32,7 @@ const HomeScreen = ({ navigation }) => {
     const floatingAnim = useRef(new Animated.Value(0)).current;
     const shimmerAnim = useRef(new Animated.Value(-1)).current;
     const userName = useSelector((state) => state.auth.user?.name) || "John Doe";
-    console.log(useSelector((state) => state.auth));
+    // console.log(useSelector((state) => state.auth));
     const shortName = userName.split(" ").slice(0, 2).join(" ");
     const role = useSelector((state) => state.auth.user?.role) || 'Student';
 
@@ -37,6 +40,8 @@ const HomeScreen = ({ navigation }) => {
         startAnimations();
         startContinuousAnimations();
     }, []);
+
+    const [sendfcmToken] = usePostfcmtokenMutation();
 
     const startAnimations = () => {
         Animated.parallel([
@@ -155,6 +160,58 @@ const HomeScreen = ({ navigation }) => {
             route: 'Anonymous'
         }
     ];
+
+    useEffect(() => {
+        const initNotifications = async () => {
+            try {
+                const permissionGranted = await requestUserPermission();
+
+                if (permissionGranted) {
+                    const fcmToken = await getFcmToken();
+
+                    if (fcmToken) {
+                        try {
+                            const response = await sendfcmToken(fcmToken);
+                            if (response?.data) {
+                                console.log("FCM token registered successfully");
+                            }
+                        } catch (err) {
+                            console.error("Failed to register FCM token:", err);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error initializing notifications:", error);
+            }
+        };
+
+        initNotifications();
+
+        const unsubscribeOnMessage = messaging().onMessage(async remoteMessage => {
+            if (remoteMessage.notification) {
+                Alert.alert(
+                    remoteMessage.notification.title || 'Notification',
+                    remoteMessage.notification.body || 'You have a new message'
+                );
+            }
+        });
+
+        const unsubscribeOnTokenRefresh = messaging().onTokenRefresh(async newToken => {
+            try {
+                await sendfcmToken(newToken);
+            } catch (err) {
+                console.error("Failed to refresh FCM token:", err);
+            }
+        });
+
+        return () => {
+            unsubscribeOnMessage();
+            unsubscribeOnTokenRefresh();
+        };
+    }, [sendfcmToken]);
+
+
+
 
     const handleMenuPress = (item) => {
         console.log(`Navigating to ${item.route}`);

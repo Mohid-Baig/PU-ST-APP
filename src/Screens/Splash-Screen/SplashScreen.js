@@ -12,6 +12,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSelector, useDispatch } from "react-redux";
 import jwtDecode from "jwt-decode";
 import { useLazyGetProfileQuery } from "../../Redux/apiSlice";
+import { logout } from '../../Redux/authslice';
 
 
 const { width, height } = Dimensions.get('window');
@@ -32,10 +33,10 @@ const SplashScreen = ({ navigation }) => {
     const { token, refreshToken } = useSelector((state) => state.auth);
     const [checkProfile] = useLazyGetProfileQuery();
     const dispatch = useDispatch();
-    console.log(token, "tokennnnn");
+    // console.log(token, "tokennnnn");
 
     const authState = useSelector((state) => state.auth);
-    console.log("Auth State:", authState);
+    // console.log("Auth State:", authState);
 
 
     const isTokenValid = (token) => {

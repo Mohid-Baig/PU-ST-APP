@@ -99,6 +99,13 @@ export const api = createApi({
         getanonymous: builder.query({
             query: () => '/anonymous',
         }),
+        postfcmtoken: builder.mutation({
+            query: (token) => ({
+                url: '/events/register-device',
+                method: 'POST',
+                body: { token },
+            }),
+        }),
     }),
 });
 
@@ -117,4 +124,5 @@ export const {
     useGetfeedbackQuery,
     useGeteventsQuery,
     useGetanonymousQuery,
+    usePostfcmtokenMutation,
 } = api;

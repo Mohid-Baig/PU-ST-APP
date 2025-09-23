@@ -315,7 +315,7 @@ const FeedbackScreen = ({ navigation }) => {
 
                 <TouchableOpacity
                     style={styles.viewDetailsButton}
-                    onPress={() => navigation.navigate('ViewFeedback', { feedbackId: item.id })}
+                    onPress={() => navigation.navigate('ViewFeedback', { feedback: item })}
                 >
                     <Text style={styles.viewDetailsText}>View Details</Text>
                     <Icon name="arrow-forward-ios" size={12} color="#1e3a8a" />
@@ -381,7 +381,7 @@ const FeedbackScreen = ({ navigation }) => {
                 </LinearGradient>
             </TouchableOpacity>
 
-            {/* Create Feedback Modal */}
+
             <Modal
                 animationType="slide"
                 transparent={true}
