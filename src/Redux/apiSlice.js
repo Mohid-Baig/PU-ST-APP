@@ -47,6 +47,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 
 export const api = createApi({
     baseQuery: baseQueryWithReauth,
+    tagTypes: ['Issues', 'Polls', 'LostFound', 'Events', 'HelpBoard', 'Feedback', 'Anonymous'],
     endpoints: (builder) => ({
         login: builder.mutation({
             query: (credentials) => ({
@@ -81,11 +82,9 @@ export const api = createApi({
         getlostfound: builder.query({
             query: () => '/lostfound',
         }),
-        getallissues: builder.query({
-            query: () => '/report/issues/all-issues',
-        }),
         issuesReportedbyme: builder.query({
             query: () => '/report/issues/reported-by-me',
+            providesTags: ['Issues'],
         }),
         gethelpboard: builder.query({
             query: () => '/helpboard',
@@ -106,6 +105,22 @@ export const api = createApi({
                 body: { token },
             }),
         }),
+        postIssues: builder.mutation({
+            query: (formData) => ({
+                url: '/report/issues',
+                method: 'POST',
+                body: formData,
+            }),
+            invalidatesTags: ['Issues'],
+        }),
+        postvotepoll: builder.mutation({
+            query: ({ pollId, optionId }) => ({
+                url: `/polls/${pollId}/vote`,
+                method: 'POST',
+                body: { optionId },
+            }),
+            invalidatesTags: ['Polls'],
+        }),
     }),
 });
 
@@ -118,11 +133,13 @@ export const {
     useGetpollsQuery,
     useGetpollbyidQuery,
     useGetlostfoundQuery,
-    useGetallissuesQuery,
     useIssuesReportedbymeQuery,
     useGethelpboardQuery,
     useGetfeedbackQuery,
     useGeteventsQuery,
     useGetanonymousQuery,
     usePostfcmtokenMutation,
+    usePostIssuesMutation,
+    usePrefetch,
+    usePostvotepollMutation,
 } = api;

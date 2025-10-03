@@ -21,10 +21,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 const { width } = Dimensions.get('window');
 
 const IssueDetailsScreen = ({ route, navigation }) => {
-    const { issueId } = route.params || {};
+    const { issuedata } = route.params || {};
     const [issue, setIssue] = useState(null);
     const [loading, setLoading] = useState(true);
     const [locationString, setLocationString] = useState('');
+    console.log(issuedata, 'data of issue')
 
     const mockIssueDetails = {
         id: '1',
@@ -69,7 +70,7 @@ const IssueDetailsScreen = ({ route, navigation }) => {
 
     useEffect(() => {
         fetchIssueDetails();
-    }, [issueId]);
+    }, [issuedata]);
 
     const fetchIssueDetails = async () => {
         try {

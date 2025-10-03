@@ -15,7 +15,8 @@ import {
     ActivityIndicator,
     Pressable,
     PermissionsAndroid,
-    Linking
+    Linking,
+    FlatList
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -23,12 +24,10 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import GetLocation from 'react-native-get-location';
 import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
+import { useIssuesReportedbymeQuery, usePostIssuesMutation } from '../../Redux/apiSlice';
 
 const ReportIssuesScreen = ({ navigation }) => {
     const [modalVisible, setModalVisible] = useState(false);
-    const [myIssues, setMyIssues] = useState([]);
-    const [loading, setLoading] = useState(true);
-
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
@@ -37,6 +36,14 @@ const ReportIssuesScreen = ({ navigation }) => {
     const [submitting, setSubmitting] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [gettingLocation, setGettingLocation] = useState(false);
+
+    const {
+        data: Issuesbyme,
+        error: myIssuesError,
+        isLoading: myIssuesLoading,
+    } = useIssuesReportedbymeQuery();
+    const [postIssues] = usePostIssuesMutation();
+    // console.log(JSON.stringify(Issuesbyme), 'data');
 
     const categories = [
         'Cleanliness',
@@ -57,63 +64,9 @@ const ReportIssuesScreen = ({ navigation }) => {
         showConfirm,
     } = useModal();
 
-    const mockIssues = [
-        {
-            id: '1',
-            title: 'Broken Water Cooler',
-            description: 'Water cooler in CS block not working',
-            category: 'Broken_resources',
-            status: 'pending',
-            createdAt: '2024-08-20T10:30:00Z',
-            image: null
-        },
-        {
-            id: '2',
-            title: 'Dirty Washroom',
-            description: 'Washroom near library needs cleaning',
-            category: 'Cleanliness',
-            status: 'resolved',
-            createdAt: '2024-08-18T14:15:00Z',
-            image: null
-        },
-        {
-            id: '3',
-            title: 'Broken Window',
-            description: 'Window glass broken in room 204',
-            category: 'Safety',
-            status: 'viewed',
-            createdAt: '2024-08-15T09:45:00Z',
-            image: null
-        }
-    ];
-
-    useEffect(() => {
-        fetchMyIssues();
-
-        // Check location permission on mount
-        if (Platform.OS === 'android') {
-            PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
-                .then(result => {
-                    console.log('Location permission status on mount:', result);
-                });
-        }
-    }, []);
-
     const handleCloseModal = () => {
         setModalVisible(false);
         resetForm();
-    };
-
-    const fetchMyIssues = async () => {
-        try {
-            setTimeout(() => {
-                setMyIssues(mockIssues);
-                setLoading(false);
-            }, 1000);
-        } catch (error) {
-            console.log('Error fetching issues:', error);
-            setLoading(false);
-        }
     };
 
     const requestLocationPermission = async () => {
@@ -122,7 +75,6 @@ const ReportIssuesScreen = ({ navigation }) => {
         }
 
         try {
-            // First check if permission is already granted
             const hasPermission = await PermissionsAndroid.check(
                 PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
             );
@@ -201,7 +153,7 @@ const ReportIssuesScreen = ({ navigation }) => {
                 coordinates: [locationResult.longitude, locationResult.latitude],
             };
 
-            setLocation(JSON.stringify(locationData));
+            setLocation(locationData);
             showSuccess("Success", "Location captured successfully!");
             console.log("Location captured:", locationData);
         } catch (error) {
@@ -263,34 +215,79 @@ const ReportIssuesScreen = ({ navigation }) => {
             return;
         }
 
+        if (!location) {
+            showError('Error', 'Location is required');
+            return;
+        }
+
         setSubmitting(true);
+
         try {
-            console.log('Submitting issue:', {
-                title,
-                description,
-                category,
-                location,
-                issueImage
+            const formData = new FormData();
+
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('category', category);
+
+            formData.append('location', JSON.stringify(location));
+
+            if (issueImage) {
+                formData.append('issueImage', {
+                    uri: issueImage.uri,
+                    type: issueImage.type || 'image/jpeg',
+                    name: issueImage.fileName || `photo_${Date.now()}.jpg`,
+                });
+            }
+
+            console.log('Submitting form data with fields:');
+            for (let [key, value] of formData._parts) {
+                if (key === 'issueImage') {
+                    console.log(key, {
+                        uri: value.uri,
+                        type: value.type,
+                        name: value.name
+                    });
+                } else {
+                    console.log(key, value);
+                }
+            }
+
+            const response = await postIssues(formData).unwrap();
+            console.log('Issue submitted successfully:', response);
+
+            setSubmitting(false);
+            setModalVisible(false);
+            resetForm();
+
+            showModal({
+                title: 'Success',
+                message: 'Issue Submitted Successfully!',
+                type: 'success',
             });
 
-            setTimeout(() => {
-                setSubmitting(false);
-                setModalVisible(false);
-                resetForm();
-                showModal({
-                    title: 'Success',
-                    message: 'Issue Submitted Successfully!',
-                    type: 'success',
-                });
-                fetchMyIssues();
-            }, 2000);
-
         } catch (error) {
-            console.log('Error submitting issue:', error);
+            console.error('Error submitting issue:', error);
+
+            if (error.originalStatus) {
+                console.log('Original status:', error.originalStatus);
+            }
+            if (error.data) {
+                console.log('Error data:', error.data);
+                console.log('Error data type:', typeof error.data);
+            }
+
             setSubmitting(false);
-            showError('Error', 'Failed to submit issue. Please try again.');
+
+            if (error.status === 'PARSING_ERROR') {
+                showError('Server Error',
+                    'The server returned an invalid response. Please try again later.');
+            } else {
+                showError('Error',
+                    error?.data?.message || 'Failed to submit issue. Please try again.');
+            }
         }
     };
+
 
     const resetForm = () => {
         setTitle('');
@@ -330,31 +327,60 @@ const ReportIssuesScreen = ({ navigation }) => {
         });
     };
 
-    const renderIssueCard = (issue) => (
-        <View key={issue.id} style={styles.issueCard}>
+    const renderIssueCard = ({ item }) => (
+        <View style={styles.issueCard}>
             <View style={styles.cardHeader}>
                 <View style={styles.cardTitleContainer}>
-                    <Text style={styles.cardTitle}>{issue.title}</Text>
-                    <Text style={styles.cardCategory}>{issue.category.replace('_', ' ')}</Text>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <Text style={styles.cardCategory}>{item.category.replace('_', ' ')}</Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(issue.status) }]}>
-                    <Text style={styles.statusText}>{getStatusText(issue.status)}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+                    <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
                 </View>
             </View>
 
             <Text style={styles.cardDescription} numberOfLines={2}>
-                {issue.description}
+                {item.description}
             </Text>
 
+            {item.photo && item.photo.url && (
+                <Image
+                    source={{ uri: item.photo.url }}
+                    style={styles.issueImage}
+                    resizeMode="cover"
+                />
+            )}
+
             <View style={styles.cardFooter}>
-                <Text style={styles.cardDate}>{formatDate(issue.createdAt)}</Text>
-                <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('ViewIssuesDetail')}>
+                <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+                <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => navigation.navigate('ViewIssuesDetail', { issuedata: item })}
+                >
                     <Text style={styles.viewButtonText}>View Details</Text>
                     <Icon name="arrow-forward-ios" size={12} color="#1e3a8a" />
                 </TouchableOpacity>
             </View>
         </View>
     );
+
+    const renderEmptyComponent = () => (
+        <View style={styles.emptyContainer}>
+            <Icon name="report-problem" size={64} color="#d1d5db" />
+            <Text style={styles.emptyTitle}>No Issues Reported</Text>
+            <Text style={styles.emptySubtitle}>Tap the + button to report your first issue</Text>
+        </View>
+    );
+
+    const renderHeaderComponent = () => (
+        <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Reported Issues</Text>
+            <Text style={styles.sectionSubtitle}>Track your submitted reports</Text>
+        </View>
+    );
+
+    // Get issues from API response
+    const myIssues = Issuesbyme?.issues || [];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -371,29 +397,35 @@ const ReportIssuesScreen = ({ navigation }) => {
                 <View style={styles.headerRight} />
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>My Reported Issues</Text>
-                    <Text style={styles.sectionSubtitle}>Track your submitted reports</Text>
+            {myIssuesLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#1e3a8a" />
+                    <Text style={styles.loadingText}>Loading your issues...</Text>
                 </View>
-
-                {loading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#1e3a8a" />
-                        <Text style={styles.loadingText}>Loading your issues...</Text>
-                    </View>
-                ) : myIssues.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <Icon name="report-problem" size={64} color="#d1d5db" />
-                        <Text style={styles.emptyTitle}>No Issues Reported</Text>
-                        <Text style={styles.emptySubtitle}>Tap the + button to report your first issue</Text>
-                    </View>
-                ) : (
-                    <View style={styles.issuesList}>
-                        {myIssues.map(renderIssueCard)}
-                    </View>
-                )}
-            </ScrollView>
+            ) : myIssuesError ? (
+                <View style={styles.errorContainer}>
+                    <Icon name="error" size={64} color="#ef4444" />
+                    <Text style={styles.errorTitle}>Error Loading Issues</Text>
+                    <Text style={styles.errorSubtitle}>Please check your connection and try again</Text>
+                    <TouchableOpacity
+                        style={styles.retryButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <FlatList
+                    style={styles.content}
+                    data={myIssues}
+                    renderItem={renderIssueCard}
+                    keyExtractor={(item) => item._id}
+                    ListHeaderComponent={renderHeaderComponent}
+                    ListEmptyComponent={renderEmptyComponent}
+                    contentContainerStyle={myIssues.length === 0 ? styles.emptyListContainer : styles.issuesList}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
 
             <TouchableOpacity
                 style={styles.fab}
@@ -601,8 +633,43 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#64748b',
     },
-    emptyContainer: {
+    errorContainer: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+        paddingHorizontal: 40,
+    },
+    errorTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#ef4444',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    errorSubtitle: {
+        fontSize: 14,
+        color: '#64748b',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    retryButton: {
+        backgroundColor: '#1e3a8a',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    emptyListContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
+    emptyContainer: {
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 80,
@@ -679,6 +746,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#64748b',
         lineHeight: 20,
+        marginBottom: 16,
+    },
+    issueImage: {
+        width: '100%',
+        height: 180,
+        borderRadius: 8,
         marginBottom: 16,
     },
     cardFooter: {

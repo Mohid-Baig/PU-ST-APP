@@ -64,7 +64,7 @@ const CustomBottomTabs = ({ state, descriptors, navigation }) => {
         const iconMap = {
             Home: 'home',
             Profile: 'person',
-            Events: 'event-available',
+            Events: 'emoji-events',
             Notifications: focused ? 'notifications' : 'notifications-none',
             Settings: 'settings',
         };

@@ -19,6 +19,7 @@ import ViewIssuesDetail from '../Screens/ReportIssues-Screen/ViewIssuesDetail';
 import ViewLostDetails from '../Screens/Lost&Found-Screen/ViewLostDetails';
 import ViewFeedback from '../Screens/Feedback-Screen/ViewFeedback';
 import ViewEventDetail from '../Screens/Event-Screen/ViewEventDetail';
+import PollsScreen from '../Screens/Polls-Screen/PollsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +44,7 @@ const StackNavigation = () => {
         <Stack.Screen name="ViewLostDetails" component={ViewLostDetails} />
         <Stack.Screen name="ViewFeedback" component={ViewFeedback} />
         <Stack.Screen name="ViewEventDetail" component={ViewEventDetail} />
+        <Stack.Screen name="Polls" component={PollsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

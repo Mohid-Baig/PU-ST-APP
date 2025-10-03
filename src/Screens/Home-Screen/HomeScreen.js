@@ -19,7 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from "react-redux";
 import messaging from '@react-native-firebase/messaging';
 import { requestUserPermission, getFcmToken } from '../../Components/notifications/firebaseMessaging';
-import { usePostfcmtokenMutation } from '../../Redux/apiSlice';
+import { usePostfcmtokenMutation, usePrefetch } from '../../Redux/apiSlice';
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
@@ -39,6 +39,24 @@ const HomeScreen = ({ navigation }) => {
     useEffect(() => {
         startAnimations();
         startContinuousAnimations();
+    }, []);
+
+    const prefetchPolls = usePrefetch('getpolls');
+    const prefetchLostFound = usePrefetch('getlostfound');
+    const prefetchIssues = usePrefetch('issuesReportedbyme');
+    const prefetchHelpboard = usePrefetch('gethelpboard');
+    const prefetchFeedback = usePrefetch('getfeedback');
+    const prefetchEvents = usePrefetch('getevents');
+    const prefetchAnonymous = usePrefetch('getanonymous');
+
+    useEffect(() => {
+        prefetchPolls(undefined, { force: true });
+        prefetchLostFound(undefined, { force: true });
+        prefetchIssues(undefined, { force: true });
+        prefetchHelpboard(undefined, { force: true });
+        prefetchFeedback(undefined, { force: true });
+        prefetchEvents(undefined, { force: true });
+        prefetchAnonymous(undefined, { force: true });
     }, []);
 
     const [sendfcmToken] = usePostfcmtokenMutation();
@@ -132,17 +150,17 @@ const HomeScreen = ({ navigation }) => {
             shadowColor: '#2563eb',
             route: 'HelpBoard'
         },
-        // {
-        //     id: 4,
-        //     title: 'Campus Events',
-        //     subtitle: 'Stay updated with notifications',
-        //     icon: 'event-note',
-        //     colors: ['#1e3a8a', '#1e40af'],
-        //     shadowColor: '#1e3a8a',
-        //     route: 'Event'
-        // },
         {
             id: 4,
+            title: 'Your Voice',
+            subtitle: 'Cast your vote and make an impact',
+            icon: 'poll',
+            colors: ['#233d84ff', '#274195ff'],
+            shadowColor: '#1e3a8a',
+            route: 'Polls'
+        },
+        {
+            id: 5,
             title: 'Improve Campus',
             subtitle: 'Share valuable feedback',
             icon: 'rate-review',
@@ -151,7 +169,7 @@ const HomeScreen = ({ navigation }) => {
             route: 'Feedback'
         },
         {
-            id: 5,
+            id: 6,
             title: 'Andar Ki Baatein',
             subtitle: 'Report confidentially',
             icon: 'visibility-off',
