@@ -27,46 +27,46 @@ const IssueDetailsScreen = ({ route, navigation }) => {
     const [locationString, setLocationString] = useState('');
     console.log(issuedata, 'data of issue')
 
-    const mockIssueDetails = {
-        id: '1',
-        title: 'Broken Water Cooler in CS Block',
-        description: 'The water cooler on the 2nd floor of the Computer Science block has been malfunctioning for the past 3 days. Water is leaking from the bottom and the cooling system is not working properly. This is causing inconvenience to students and faculty who rely on this facility during classes. The floor around the cooler is constantly wet, creating a potential safety hazard.',
-        category: 'Broken_resources',
-        status: 'viewed',
-        createdAt: '2024-08-20T10:30:00Z',
-        updatedAt: '2024-08-21T14:20:00Z',
-        location: JSON.stringify({
-            type: "Point",
-            coordinates: [73.0563, 31.4504]
-        }),
-        image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=400&h=300&fit=crop',
-        priority: 'high',
-        assignedTo: 'Maintenance Department',
-        adminRemarks: 'Parts have been ordered. Expected resolution within 2-3 days.',
-        comments: [
-            {
-                id: '1',
-                user: 'Admin Team',
-                comment: 'Issue has been logged and assigned to maintenance team. Priority set to high due to safety concerns.',
-                createdAt: '2024-08-20T11:00:00Z',
-                type: 'admin'
-            },
-            {
-                id: '2',
-                user: 'Maintenance Team',
-                comment: 'We have inspected the issue. Water valve needs replacement and cooling unit requires repair. Parts ordered from supplier.',
-                createdAt: '2024-08-21T09:15:00Z',
-                type: 'staff'
-            },
-            {
-                id: '3',
-                user: 'Maintenance Team',
-                comment: 'Update: Parts arrived. Repair work will begin tomorrow morning.',
-                createdAt: '2024-08-22T16:30:00Z',
-                type: 'staff'
-            }
-        ]
-    };
+    // const mockIssueDetails = {
+    //     id: '1',
+    //     title: 'Broken Water Cooler in CS Block',
+    //     description: 'The water cooler on the 2nd floor of the Computer Science block has been malfunctioning for the past 3 days. Water is leaking from the bottom and the cooling system is not working properly. This is causing inconvenience to students and faculty who rely on this facility during classes. The floor around the cooler is constantly wet, creating a potential safety hazard.',
+    //     category: 'Broken_resources',
+    //     status: 'viewed',
+    //     createdAt: '2024-08-20T10:30:00Z',
+    //     updatedAt: '2024-08-21T14:20:00Z',
+    //     location: JSON.stringify({
+    //         type: "Point",
+    //         coordinates: [73.0563, 31.4504]
+    //     }),
+    //     image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=400&h=300&fit=crop',
+    //     priority: 'high',
+    //     assignedTo: 'Maintenance Department',
+    //     adminRemarks: 'Parts have been ordered. Expected resolution within 2-3 days.',
+    //     comments: [
+    //         {
+    //             id: '1',
+    //             user: 'Admin Team',
+    //             comment: 'Issue has been logged and assigned to maintenance team. Priority set to high due to safety concerns.',
+    //             createdAt: '2024-08-20T11:00:00Z',
+    //             type: 'admin'
+    //         },
+    //         {
+    //             id: '2',
+    //             user: 'Maintenance Team',
+    //             comment: 'We have inspected the issue. Water valve needs replacement and cooling unit requires repair. Parts ordered from supplier.',
+    //             createdAt: '2024-08-21T09:15:00Z',
+    //             type: 'staff'
+    //         },
+    //         {
+    //             id: '3',
+    //             user: 'Maintenance Team',
+    //             comment: 'Update: Parts arrived. Repair work will begin tomorrow morning.',
+    //             createdAt: '2024-08-22T16:30:00Z',
+    //             type: 'staff'
+    //         }
+    //     ]
+    // };
 
     useEffect(() => {
         fetchIssueDetails();
@@ -75,9 +75,26 @@ const IssueDetailsScreen = ({ route, navigation }) => {
     const fetchIssueDetails = async () => {
         try {
             setTimeout(() => {
-                setIssue(mockIssueDetails);
-                if (mockIssueDetails.location) {
-                    const locationData = JSON.parse(mockIssueDetails.location);
+                const filteredIssueData = {
+                    id: issuedata.id,
+                    title: issuedata.title,
+                    description: issuedata.description,
+                    category: issuedata.category,
+                    status: issuedata.status,
+                    createdAt: issuedata.createdAt,
+                    updatedAt: issuedata.updatedAt,
+                    location: JSON.stringify({
+                        type: issuedata.location?.type || 'Point',
+                        coordinates: issuedata.location?.coordinates
+                    }),
+                    image: issuedata.photo?.url,
+                    adminRemarks: issuedata.adminRemarks || 'No remarks from admin.',
+                    priority: 'high',
+                    assignedTo: 'Maintenance Department',
+                }
+                setIssue(filteredIssueData);
+                if (issuedata.location) {
+                    const locationData = JSON.parse(filteredIssueData.location);
                     if (locationData.coordinates && locationData.coordinates.length === 2) {
                         setLocationString(`${locationData.coordinates[1].toFixed(6)}, ${locationData.coordinates[0].toFixed(6)}`);
                     }
@@ -205,7 +222,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
     };
 
     const handleImageView = () => {
-        // You can implement full-screen image view here
         Alert.alert('Image', 'Full-screen image view will be implemented');
     };
 
@@ -243,7 +259,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
-            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.headerButton}
@@ -261,7 +276,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Status Header */}
                 <LinearGradient
                     colors={[getStatusColor(issue.status), getStatusColor(issue.status) + '80']}
                     style={styles.statusHeader}
@@ -279,7 +293,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     </View>
                 </LinearGradient>
 
-                {/* Issue Info Card */}
                 <View style={styles.infoCard}>
                     <View style={styles.cardHeader}>
                         <View style={styles.priorityBadge}>
@@ -305,7 +318,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
-                {/* Description Card */}
                 <View style={styles.card}>
                     <View style={styles.cardTitleRow}>
                         <Icon name="description" size={20} color="#1e3a8a" />
@@ -314,7 +326,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     <Text style={styles.descriptionText}>{issue.description}</Text>
                 </View>
 
-                {/* Admin Remarks */}
                 {issue.adminRemarks && (
                     <View style={styles.remarksCard}>
                         <View style={styles.cardTitleRow}>
@@ -325,7 +336,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* Image */}
                 {issue.image && (
                     <View style={styles.card}>
                         <View style={styles.cardTitleRow}>
@@ -341,7 +351,6 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* Location */}
                 {locationString && (
                     <View style={styles.card}>
                         <View style={styles.cardTitleRow}>
@@ -361,41 +370,9 @@ const IssueDetailsScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* Timeline/Comments */}
-                {issue.comments && issue.comments.length > 0 && (
-                    <View style={styles.card}>
-                        <View style={styles.cardTitleRow}>
-                            <Icon name="timeline" size={20} color="#1e3a8a" />
-                            <Text style={styles.cardTitle}>Timeline ({issue.comments.length} updates)</Text>
-                        </View>
-                        <View style={styles.timeline}>
-                            {issue.comments.map((comment, index) => (
-                                <View key={comment.id} style={styles.timelineItem}>
-                                    <View style={[
-                                        styles.timelineMarker,
-                                        { backgroundColor: comment.type === 'admin' ? '#10b981' : '#3b82f6' }
-                                    ]}>
-                                        <Icon
-                                            name={comment.type === 'admin' ? 'admin-panel-settings' : 'build'}
-                                            size={12}
-                                            color="#ffffff"
-                                        />
-                                    </View>
-                                    {index < issue.comments.length - 1 && <View style={styles.timelineLine} />}
-                                    <View style={styles.timelineContent}>
-                                        <View style={styles.timelineHeader}>
-                                            <Text style={styles.timelineUser}>{comment.user}</Text>
-                                            <Text style={styles.timelineTime}>{formatTimeAgo(comment.createdAt)}</Text>
-                                        </View>
-                                        <Text style={styles.timelineText}>{comment.comment}</Text>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                )}
 
-                {/* Action Buttons */}
+
+
                 <View style={styles.actionSection}>
                     <TouchableOpacity
                         style={styles.primaryButton}

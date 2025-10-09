@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -20,26 +20,19 @@ import { useSelector } from "react-redux";
 import messaging from '@react-native-firebase/messaging';
 import { requestUserPermission, getFcmToken } from '../../Components/notifications/firebaseMessaging';
 import { usePostfcmtokenMutation, usePrefetch } from '../../Redux/apiSlice';
+
 const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width - 48;
 
 const HomeScreen = ({ navigation }) => {
-
-
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(-50)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
     const cardAnimations = useRef([...Array(6)].map(() => new Animated.Value(0))).current;
-    const floatingAnim = useRef(new Animated.Value(0)).current;
-    const shimmerAnim = useRef(new Animated.Value(-1)).current;
-    const userName = useSelector((state) => state.auth.user?.name) || "John Doe";
-    // console.log(useSelector((state) => state.auth));
+    const floatAnim = useRef(new Animated.Value(0)).current;
+
+    const userName = useSelector((state) => state.auth.user?.name) || "Apki Pehchan";
     const shortName = userName.split(" ").slice(0, 2).join(" ");
     const role = useSelector((state) => state.auth.user?.role) || 'Student';
-
-    useEffect(() => {
-        startAnimations();
-        startContinuousAnimations();
-    }, []);
 
     const prefetchPolls = usePrefetch('getpolls');
     const prefetchLostFound = usePrefetch('getlostfound');
@@ -48,6 +41,50 @@ const HomeScreen = ({ navigation }) => {
     const prefetchFeedback = usePrefetch('getfeedback');
     const prefetchEvents = usePrefetch('getevents');
     const prefetchAnonymous = usePrefetch('getanonymous');
+    const [sendfcmToken] = usePostfcmtokenMutation();
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+        ]).start();
+
+        cardAnimations.forEach((anim, index) => {
+            Animated.timing(anim, {
+                toValue: 1,
+                delay: 200 + index * 80,
+                duration: 500,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }).start();
+        });
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(floatAnim, {
+                    toValue: 1,
+                    duration: 3000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(floatAnim, {
+                    toValue: 0,
+                    duration: 3000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
 
     useEffect(() => {
         prefetchPolls(undefined, { force: true });
@@ -59,140 +96,15 @@ const HomeScreen = ({ navigation }) => {
         prefetchAnonymous(undefined, { force: true });
     }, []);
 
-    const [sendfcmToken] = usePostfcmtokenMutation();
-
-    const startAnimations = () => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 1200,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-            }),
-            Animated.spring(slideAnim, {
-                toValue: 0,
-                tension: 50,
-                friction: 8,
-                useNativeDriver: true,
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                tension: 50,
-                friction: 7,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        cardAnimations.forEach((anim, index) => {
-            Animated.spring(anim, {
-                toValue: 1,
-                delay: 400 + index * 150,
-                tension: 60,
-                friction: 8,
-                useNativeDriver: true,
-            }).start();
-        });
-    };
-
-    const startContinuousAnimations = () => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(floatingAnim, {
-                    toValue: 1,
-                    duration: 3000,
-                    easing: Easing.inOut(Easing.sin),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(floatingAnim, {
-                    toValue: 0,
-                    duration: 3000,
-                    easing: Easing.inOut(Easing.sin),
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-
-        Animated.loop(
-            Animated.timing(shimmerAnim, {
-                toValue: 1,
-                duration: 2500,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
-        ).start();
-    };
-
-    const menuItems = [
-        {
-            id: 1,
-            title: 'Fix This!',
-            subtitle: 'Report campus issues instantly',
-            icon: 'build-circle',
-            colors: ['#1e3a8a', '#3b82f6'],
-            shadowColor: '#1e3a8a',
-            route: 'ReportIssues'
-        },
-        {
-            id: 2,
-            title: 'Lost Something?',
-            subtitle: 'Find your missing items',
-            icon: 'search',
-            colors: ['#1e40af', '#60a5fa'],
-            shadowColor: '#1e40af',
-            route: 'LostFound'
-        },
-        {
-            id: 3,
-            title: 'Need Help?',
-            subtitle: 'Connect with student support',
-            icon: 'help',
-            colors: ['#2563eb', '#93c5fd'],
-            shadowColor: '#2563eb',
-            route: 'HelpBoard'
-        },
-        {
-            id: 4,
-            title: 'Your Voice',
-            subtitle: 'Cast your vote and make an impact',
-            icon: 'poll',
-            colors: ['#233d84ff', '#274195ff'],
-            shadowColor: '#1e3a8a',
-            route: 'Polls'
-        },
-        {
-            id: 5,
-            title: 'Improve Campus',
-            subtitle: 'Share valuable feedback',
-            icon: 'rate-review',
-            colors: ['#1d4ed8', '#3b82f6'],
-            shadowColor: '#1d4ed8',
-            route: 'Feedback'
-        },
-        {
-            id: 6,
-            title: 'Andar Ki Baatein',
-            subtitle: 'Report confidentially',
-            icon: 'visibility-off',
-            colors: ['#1e40af', '#2563eb'],
-            shadowColor: '#1e40af',
-            route: 'Anonymous'
-        }
-    ];
-
     useEffect(() => {
         const initNotifications = async () => {
             try {
                 const permissionGranted = await requestUserPermission();
-
                 if (permissionGranted) {
                     const fcmToken = await getFcmToken();
-
                     if (fcmToken) {
                         try {
-                            const response = await sendfcmToken(fcmToken);
-                            if (response?.data) {
-                                console.log("FCM token registered successfully");
-                            }
+                            await sendfcmToken(fcmToken);
                         } catch (err) {
                             console.error("Failed to register FCM token:", err);
                         }
@@ -228,11 +140,64 @@ const HomeScreen = ({ navigation }) => {
         };
     }, [sendfcmToken]);
 
-
-
+    const menuItems = [
+        {
+            id: 1,
+            title: 'Fix This!',
+            subtitle: 'Report issues instantly',
+            icon: 'build-circle',
+            gradient: ['#1e3a8a', '#2563eb'],
+            iconBg: '#3b82f6',
+            route: 'ReportIssues'
+        },
+        {
+            id: 2,
+            title: 'Lost Something?',
+            subtitle: 'Find your missing items',
+            icon: 'search',
+            gradient: ['#1e40af', '#3b82f6'],
+            iconBg: '#60a5fa',
+            route: 'LostFound'
+        },
+        {
+            id: 3,
+            title: 'Need Help?',
+            subtitle: 'Connect with support',
+            icon: 'help',
+            gradient: ['#2563eb', '#60a5fa'],
+            iconBg: '#93c5fd',
+            route: 'HelpBoard'
+        },
+        {
+            id: 4,
+            title: 'Your Voice',
+            subtitle: 'Cast your vote',
+            icon: 'poll',
+            gradient: ['#233d84', '#3b82f6'],
+            iconBg: '#60a5fa',
+            route: 'Polls'
+        },
+        {
+            id: 5,
+            title: 'Improve Campus',
+            subtitle: 'Share feedback',
+            icon: 'rate-review',
+            gradient: ['#1d4ed8', '#3b82f6'],
+            iconBg: '#60a5fa',
+            route: 'Feedback'
+        },
+        {
+            id: 6,
+            title: 'Andar Ki Baatein',
+            subtitle: 'Report confidentially',
+            icon: 'visibility-off',
+            gradient: ['#1e40af', '#2563eb'],
+            iconBg: '#60a5fa',
+            route: 'Anonymous'
+        }
+    ];
 
     const handleMenuPress = (item) => {
-        console.log(`Navigating to ${item.route}`);
         navigation.navigate(item.route);
     };
 
@@ -244,76 +209,53 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const renderMenuItem = (item, index) => {
-        const animatedStyle = {
-            opacity: cardAnimations[index],
-            transform: [
-                {
-                    translateY: cardAnimations[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [50, 0],
-                    })
-                },
-                {
-                    scale: cardAnimations[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                    })
-                }
-            ]
-        };
+        const cardScale = cardAnimations[index].interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.9, 1],
+        });
+
+        const cardOpacity = cardAnimations[index];
 
         return (
-            <Animated.View key={item.id} style={animatedStyle}>
+            <Animated.View
+                key={item.id}
+                style={[
+                    styles.cardWrapper,
+                    {
+                        opacity: cardOpacity,
+                        transform: [{ scale: cardScale }]
+                    }
+                ]}
+            >
                 <Pressable
                     onPress={() => handleMenuPress(item)}
+                    android_ripple={{ color: 'rgba(59, 130, 246, 0.1)' }}
                     style={({ pressed }) => [
-                        styles.menuItem,
-                        {
-                            transform: [{ scale: pressed ? 0.98 : 1 }],
-                        }
+                        styles.card,
+                        pressed && styles.cardPressed
                     ]}
                 >
                     <LinearGradient
-                        colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.90)']}
-                        style={styles.menuItemGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                        colors={['#FFFFFF', '#F8FAFC']}
+                        style={styles.cardGradient}
                     >
-                        <Animated.View
-                            style={[
-                                styles.shimmerOverlay,
-                                {
-                                    transform: [{
-                                        translateX: shimmerAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [-width, width],
-                                        })
-                                    }]
-                                }
-                            ]}
-                        />
-
-                        <View style={styles.menuItemContent}>
-                            <LinearGradient
-                                colors={item.colors}
-                                style={styles.iconContainer}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            >
-                                <Icon name={item.icon} size={32} color="#ffffff" />
-                            </LinearGradient>
-
-                            <View style={styles.textContainer}>
-                                <Text style={styles.menuItemTitle}>{item.title}</Text>
-                                <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
+                        <View style={styles.cardContent}>
+                            <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
+                                <Icon name={item.icon} size={26} color="#FFFFFF" />
                             </View>
 
-                            <LinearGradient
-                                colors={item.colors}
-                                style={styles.arrowGradient}
-                            >
-                                <Icon name="arrow-forward-ios" size={18} color="#ffffff" />
-                            </LinearGradient>
+                            <View style={styles.cardText}>
+                                <Text style={styles.cardTitle} numberOfLines={1}>
+                                    {item.title}
+                                </Text>
+                                <Text style={styles.cardSubtitle} numberOfLines={1}>
+                                    {item.subtitle}
+                                </Text>
+                            </View>
+
+                            <View style={styles.arrowCircle}>
+                                <Icon name="arrow-forward" size={20} color="#1e3a8a" />
+                            </View>
                         </View>
                     </LinearGradient>
                 </Pressable>
@@ -321,17 +263,13 @@ const HomeScreen = ({ navigation }) => {
         );
     };
 
-    const floatingTransform = {
-        transform: [{
-            translateY: floatingAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -10],
-            })
-        }]
-    };
+    const floatingTranslate = floatAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, -8],
+    });
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <StatusBar
                 translucent
                 backgroundColor="transparent"
@@ -339,63 +277,65 @@ const HomeScreen = ({ navigation }) => {
             />
 
             <LinearGradient
-                colors={['#1e3a8a', '#1e40af', '#3b82f6']}
-                style={styles.backgroundGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                colors={['#0f172a', '#1e3a8a', '#2563eb']}
+                style={styles.background}
             />
-
-            <Animated.View style={[styles.floatingElement, styles.floatingElement1, floatingTransform]} />
-            <Animated.View style={[styles.floatingElement, styles.floatingElement2,
-            {
-                transform: [{
-                    translateY: floatingAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 15],
-                    })
-                }]
-            }
-            ]} />
 
             <Animated.View
                 style={[
-                    styles.header,
+                    styles.decorCircle1,
+                    { transform: [{ translateY: floatingTranslate }] }
+                ]}
+            />
+            <Animated.View
+                style={[
+                    styles.decorCircle2,
                     {
-                        opacity: fadeAnim,
-                        transform: [
-                            { translateY: slideAnim },
-                            { scale: scaleAnim }
-                        ]
+                        transform: [{
+                            translateY: floatAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 10],
+                            })
+                        }]
                     }
                 ]}
-            >
-                <View style={styles.headerContainer}>
-                    <View style={styles.greetingContainer}>
-                        <Text style={styles.greetingText}>{getGreeting()}</Text>
-                        <Text style={styles.userNameText}>{shortName}</Text>
-                        <View style={styles.roleContainer}>
-                            <Icon name="school" size={16} color="rgba(255,255,255,0.8)" />
-                            <Text style={styles.roleText}>Student • PU Smart Tracker</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.logoContainer}>
-                        <LinearGradient
-                            colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                            style={styles.logoGradient}
-                        >
-                            <Icon name="account-balance" size={28} color="#ffffff" />
-                        </LinearGradient>
-                    </View>
-                </View>
-            </Animated.View>
+            />
 
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
-                bounces={true}
+                contentContainerStyle={styles.scrollContent}
             >
+                <Animated.View
+                    style={[
+                        styles.header,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
+                    <View style={styles.headerTop}>
+                        <View style={styles.greetingSection}>
+                            <Text style={styles.greeting}>{getGreeting()}</Text>
+                            <Text style={styles.userName}>{shortName}</Text>
+                        </View>
+                        <View style={styles.logoCircle}>
+                            <LinearGradient
+                                colors={['#3b82f6', '#60a5fa']}
+                                style={styles.logoGradient}
+                            >
+                                <Icon name="account-balance" size={24} color="#FFFFFF" />
+                            </LinearGradient>
+                        </View>
+                    </View>
+
+                    <View style={styles.roleChip}>
+                        <Icon name="school" size={14} color="#3b82f6" />
+                        <Text style={styles.roleText}>Student • PU Smart Tracker</Text>
+                    </View>
+                </Animated.View>
+
                 <Animated.View
                     style={[
                         styles.welcomeSection,
@@ -405,217 +345,188 @@ const HomeScreen = ({ navigation }) => {
                         }
                     ]}
                 >
-                    <Text style={styles.welcomeTitle}>How can we help you today?</Text>
-                    <Text style={styles.welcomeSubtitle}>Choose from the options below to get started</Text>
+                    <Text style={styles.welcomeTitle}>What would you like to do?</Text>
+                    <Text style={styles.welcomeSubtitle}>Choose an option below to get started</Text>
                 </Animated.View>
 
-                <View style={styles.menuGrid}>
+                <View style={styles.menuContainer}>
                     {menuItems.map((item, index) => renderMenuItem(item, index))}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#0f172a',
     },
-    backgroundGradient: {
+    background: {
         position: 'absolute',
         width: width * 1.5,
-        height: height * 1.5,
-        top: -height * 0.25,
+        height: height * 1.2,
+        top: -height * 0.1,
         left: -width * 0.25,
     },
-    floatingElement: {
+    decorCircle1: {
         position: 'absolute',
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        width: 200,
+        height: 200,
         borderRadius: 100,
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        top: 80,
+        right: -60,
     },
-    floatingElement1: {
-        width: 120,
-        height: 120,
-        top: height * 0.15,
-        right: -30,
-    },
-    floatingElement2: {
-        width: 80,
-        height: 80,
-        top: height * 0.6,
-        left: -20,
-    },
-    header: {
-        marginTop: Platform.OS === 'ios' ? 50 : 40,
-        marginHorizontal: 20,
-        marginBottom: 10,
-    },
-    headerContainer: {
-        backgroundColor: 'rgba(255,255,255,0.12)',
-        borderRadius: 25,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.15)',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.15,
-                shadowRadius: 15,
-            },
-        }),
-    },
-    greetingContainer: {
-        flex: 1,
-    },
-    greetingText: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
-        fontWeight: '500',
-        marginBottom: 4,
-        letterSpacing: 0.5,
-    },
-    userNameText: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: '#ffffff',
-        marginBottom: 6,
-        letterSpacing: -0.5,
-    },
-    roleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    roleText: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.8)',
-        marginLeft: 6,
-        fontWeight: '500',
-    },
-    logoContainer: {
-        borderRadius: 18,
-        overflow: 'hidden',
-    },
-    logoGradient: {
-        width: 54,
-        height: 54,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+    decorCircle2: {
+        position: 'absolute',
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+        bottom: 200,
+        left: -40,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 140,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 150,
+    },
+    header: {
+        marginHorizontal: 24,
+        marginBottom: 32,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 24,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    greetingSection: {
+        flex: 1,
+    },
+    greeting: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontWeight: '500',
+        marginBottom: 4,
+        letterSpacing: 0.3,
+    },
+    userName: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: -0.5,
+    },
+    logoCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        overflow: 'hidden',
+    },
+    logoGradient: {
+        width: 52,
+        height: 52,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    roleChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
+    roleText: {
+        fontSize: 12,
+        color: '#1e3a8a',
+        fontWeight: '600',
+        marginLeft: 6,
     },
     welcomeSection: {
         paddingHorizontal: 24,
-        paddingVertical: 25,
-        alignItems: 'center',
+        marginBottom: 24,
     },
     welcomeTitle: {
-        fontSize: 26,
+        fontSize: 24,
         fontWeight: '700',
-        color: '#ffffff',
-        textAlign: 'center',
-        marginBottom: 12,
+        color: '#FFFFFF',
+        marginBottom: 8,
         letterSpacing: -0.5,
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 5,
     },
     welcomeSubtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
-        textAlign: 'center',
+        fontSize: 15,
+        color: 'rgba(255, 255, 255, 0.7)',
         fontWeight: '400',
-        lineHeight: 22,
     },
-    menuGrid: {
-        paddingHorizontal: 20,
-        gap: 18,
+    menuContainer: {
+        paddingHorizontal: 24,
     },
-    menuItem: {
-        borderRadius: 22,
+    cardWrapper: {
+        marginBottom: 16,
+    },
+    card: {
+        borderRadius: 20,
         overflow: 'hidden',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
-    menuItemGradient: {
-        borderRadius: 22,
+    cardPressed: {
+        opacity: 0.9,
+    },
+    cardGradient: {
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        overflow: 'hidden',
+        borderColor: 'rgba(203, 213, 225, 0.3)',
     },
-    shimmerOverlay: {
-        position: 'absolute',
-        top: 0,
-        width: 100,
-        height: '100%',
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        transform: [{ skewX: '-20deg' }],
-    },
-    menuItemContent: {
-        padding: 24,
+    cardContent: {
         flexDirection: 'row',
         alignItems: 'center',
+        padding: 18,
     },
-    iconContainer: {
-        width: 68,
-        height: 68,
-        borderRadius: 20,
+    iconCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 18,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.2,
-                shadowRadius: 6,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
+        marginRight: 16,
     },
-    textContainer: {
+    cardText: {
         flex: 1,
     },
-    menuItemTitle: {
-        fontSize: 20,
+    cardTitle: {
+        fontSize: 17,
         fontWeight: '700',
-        color: '#1e3a8a', // PU blue text
-        marginBottom: 6,
-        letterSpacing: -0.3,
+        color: '#1e293b',
+        marginBottom: 3,
+        letterSpacing: -0.2,
     },
-    menuItemSubtitle: {
-        fontSize: 14,
-        color: '#64748b', // Light gray text
+    cardSubtitle: {
+        fontSize: 13,
+        color: '#64748b',
         fontWeight: '500',
-        lineHeight: 18,
     },
-    arrowGradient: {
+    arrowCircle: {
         width: 36,
         height: 36,
-        borderRadius: 12,
+        borderRadius: 18,
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
+        marginLeft: 8,
     },
 });
 
