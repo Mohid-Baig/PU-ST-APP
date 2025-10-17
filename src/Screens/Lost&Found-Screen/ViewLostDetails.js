@@ -26,7 +26,8 @@ import useModal from '../../Components/Customs/UseModalHook';
 const { width } = Dimensions.get('window');
 
 const ViewLostDetailsScreen = ({ navigation, route }) => {
-    const { itemId } = route.params || {};
+    const { itemDetail } = route.params || {};
+    console.log(itemDetail)
 
     const [item, setItem] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -87,12 +88,11 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         fetchItemDetails();
-    }, [itemId]);
+    }, [itemDetail]);
 
     const fetchItemDetails = async () => {
         try {
             setLoading(true);
-            // Simulate API call
             setTimeout(() => {
                 setItem(mockItemDetails);
                 setLoading(false);

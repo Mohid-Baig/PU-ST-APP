@@ -9,7 +9,6 @@ import {
     TextInput,
     Alert,
     Image,
-    Platform,
     SafeAreaView,
     StatusBar,
     ActivityIndicator,
@@ -22,17 +21,15 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
+import { useGetlostfoundQuery, usePostlostfoundMutation } from '../../Redux/apiSlice'
 
 const { width } = Dimensions.get('window');
 
 const LostAndFoundScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('all');
-
     const [modalVisible, setModalVisible] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [items, setItems] = useState([]);
     const [myItems, setMyItems] = useState([]);
-
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('lost');
@@ -47,106 +44,48 @@ const LostAndFoundScreen = ({ navigation }) => {
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
+    const [postLostFound] = usePostlostfoundMutation();
+    const { data, error, isLoading } = useGetlostfoundQuery();
+
     const categories = [
-        'Electronics',
-        'Clothing',
-        'Books',
-        'Accessories',
-        'Documents',
-        'Keys',
-        'Bags',
-        'Sports Equipment',
-        'Other'
+        { label: 'Electronics', value: 'electronics' },
+        { label: 'Clothing', value: 'clothing' },
+        { label: 'Accessories', value: 'accessories' },
+        { label: 'Documents', value: 'documents' },
+        { label: 'Other', value: 'other' },
     ];
 
     const tabs = [
         { id: 'all', label: 'All Items', icon: 'list' },
         { id: 'lost', label: 'Lost', icon: 'search' },
         { id: 'found', label: 'Found', icon: 'check-circle' },
-        { id: 'my', label: 'My Posts', icon: 'person' }
     ];
 
-    const {
-        modalConfig,
-        showModal,
-        hideModal,
-        showError,
-        showSuccess,
-    } = useModal();
-
-    const mockItems = [
-        {
-            id: '1',
-            title: 'Black iPhone 13',
-            description: 'Lost my black iPhone 13 near the library. Has a clear case with some stickers.',
-            type: 'lost',
-            category: 'Electronics',
-            dateLostOrFound: '2024-08-25',
-            location: 'Central Library',
-            contactInfo: 'john.doe@university.edu',
-            collectionInfo: '',
-            isAnonymous: false,
-            photos: [],
-            reportedBy: {
-                name: 'John Doe',
-                uniId: 'ST2023001'
-            },
-            status: 'active',
-            createdAt: '2024-08-25T10:30:00Z'
-        },
-        {
-            id: '2',
-            title: 'Blue Water Bottle',
-            description: 'Found a blue water bottle in the cafeteria. Has university logo on it.',
-            type: 'found',
-            category: 'Other',
-            dateLostOrFound: '2024-08-24',
-            location: 'Main Cafeteria',
-            contactInfo: 'jane.smith@university.edu',
-            collectionInfo: 'Available at security office',
-            isAnonymous: false,
-            photos: [],
-            reportedBy: {
-                name: 'Jane Smith',
-                uniId: 'ST2023002'
-            },
-            status: 'active',
-            createdAt: '2024-08-24T14:15:00Z'
-        },
-        {
-            id: '3',
-            title: 'Red Backpack',
-            description: 'Lost my red backpack containing important books and notes.',
-            type: 'lost',
-            category: 'Bags',
-            dateLostOrFound: '2024-08-23',
-            location: 'CS Department',
-            contactInfo: 'contact via app',
-            collectionInfo: '',
-            isAnonymous: true,
-            photos: [],
-            reportedBy: null,
-            status: 'active',
-            createdAt: '2024-08-23T09:45:00Z'
-        }
-    ];
+    const { modalConfig, showModal, hideModal, showError, showSuccess } = useModal();
 
     useEffect(() => {
-        fetchItems();
-    }, []);
-
-    const fetchItems = async () => {
-        try {
-            setTimeout(() => {
-                setItems(mockItems);
-                setMyItems(mockItems.filter(item => item.reportedBy?.name === 'John Doe')); // Mock user items
-                setLoading(false);
-            }, 1000);
-        } catch (error) {
-            console.log('Error fetching items:', error);
-            setLoading(false);
+        if (!isLoading && data) {
+            setItems(data?.items || []);
+            setMyItems(data?.items?.filter(item => item.reportedBy?.name === 'John Doe') || []);
         }
-    };
+    }, [data, isLoading]);
+
+    useEffect(() => {
+        if (error) {
+            console.error('API Error:', error);
+            let errorMessage = 'Failed to load items. Please try again later.';
+
+            if (error.data?.message) {
+                errorMessage = error.data.message;
+            } else if (error.status === 'FETCH_ERROR') {
+                errorMessage = 'Network error. Please check your connection.';
+            } else if (error.status === 401) {
+                errorMessage = 'Unauthorized. Please login again.';
+            }
+
+            showError('Error', errorMessage);
+        }
+    }, [error]);
 
     const getFilteredItems = () => {
         switch (activeTab) {
@@ -201,8 +140,7 @@ const LostAndFoundScreen = ({ navigation }) => {
     };
 
     const removeImage = (index) => {
-        const updatedImages = itemImages.filter((_, i) => i !== index);
-        setItemImages(updatedImages);
+        setItemImages(itemImages.filter((_, i) => i !== index));
     };
 
     const submitItem = async () => {
@@ -232,20 +170,23 @@ const LostAndFoundScreen = ({ navigation }) => {
                 });
             });
 
-            console.log('Submitting item:', formData);
-
-            setTimeout(() => {
-                setSubmitting(false);
-                setModalVisible(false);
-                resetForm();
-                showSuccess('Success', `${type === 'lost' ? 'Lost' : 'Found'} item posted successfully!`);
-                fetchItems();
-            }, 2000);
-
-        } catch (error) {
-            console.log('Error submitting item:', error);
+            const response = await postLostFound(formData).unwrap();
             setSubmitting(false);
-            showError('Error', 'Failed to post item. Please try again.');
+            setModalVisible(false);
+            resetForm();
+            showSuccess('Success', `${type === 'lost' ? 'Lost' : 'Found'} item posted successfully!`);
+        } catch (error) {
+            console.error('Submit error:', error);
+            setSubmitting(false);
+            let errorMessage = 'Failed to post item. Please try again.';
+
+            if (error?.data?.message) {
+                errorMessage = error.data.message;
+            } else if (error?.status === 'FETCH_ERROR') {
+                errorMessage = 'Network error. Please check your connection.';
+            }
+
+            showError('Error', errorMessage);
         }
     };
 
@@ -258,13 +199,8 @@ const LostAndFoundScreen = ({ navigation }) => {
         });
     };
 
-    const getTypeIcon = (itemType) => {
-        return itemType === 'lost' ? 'search' : 'check-circle';
-    };
-
-    const getTypeColor = (itemType) => {
-        return itemType === 'lost' ? '#ef4444' : '#10b981';
-    };
+    const getTypeIcon = (itemType) => itemType === 'lost' ? 'search' : 'check-circle';
+    const getTypeColor = (itemType) => itemType === 'lost' ? '#ef4444' : '#10b981';
 
     const renderTabBar = () => (
         <View style={styles.tabContainer}>
@@ -275,11 +211,7 @@ const LostAndFoundScreen = ({ navigation }) => {
                         style={[styles.tab, activeTab === tab.id && styles.activeTab]}
                         onPress={() => setActiveTab(tab.id)}
                     >
-                        <Icon
-                            name={tab.icon}
-                            size={20}
-                            color={activeTab === tab.id ? '#1e3a8a' : '#64748b'}
-                        />
+                        <Icon name={tab.icon} size={20} color={activeTab === tab.id ? '#1e3a8a' : '#64748b'} />
                         <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
                             {tab.label}
                         </Text>
@@ -292,7 +224,7 @@ const LostAndFoundScreen = ({ navigation }) => {
     const renderItemCard = ({ item }) => (
         <TouchableOpacity
             style={styles.itemCard}
-            onPress={() => navigation.navigate('ViewLostDetails', { itemId: item.id })}
+            onPress={() => navigation.navigate('ViewLostDetails', { itemDetail: item })}
         >
             <View style={styles.cardHeader}>
                 <View style={styles.cardTitleContainer}>
@@ -336,7 +268,7 @@ const LostAndFoundScreen = ({ navigation }) => {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-                <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('ViewLostDetails')}>
+                <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('ViewLostDetails', { itemDetail: item })}>
                     <Text style={styles.viewButtonText}>View Details</Text>
                     <Icon name="arrow-forward-ios" size={12} color="#1e3a8a" />
                 </TouchableOpacity>
@@ -349,10 +281,22 @@ const LostAndFoundScreen = ({ navigation }) => {
             <Icon name="search-off" size={64} color="#d1d5db" />
             <Text style={styles.emptyTitle}>No Items Found</Text>
             <Text style={styles.emptySubtitle}>
-                {activeTab === 'my'
-                    ? "You haven't posted any items yet"
-                    : "No items in this category"}
+                {activeTab === 'my' ? "You haven't posted any items yet" : "No items in this category"}
             </Text>
+        </View>
+    );
+
+    const renderErrorState = () => (
+        <View style={styles.emptyContainer}>
+            <Icon name="error-outline" size={64} color="#ef4444" />
+            <Text style={styles.emptyTitle}>Failed to Load Items</Text>
+            <Text style={styles.emptySubtitle}>Please check your connection and try again</Text>
+            <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => window.location.reload()}
+            >
+                <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -361,10 +305,7 @@ const LostAndFoundScreen = ({ navigation }) => {
             <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                     <Icon name="arrow-back" size={24} color="#1e3a8a" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Lost & Found</Text>
@@ -373,40 +314,31 @@ const LostAndFoundScreen = ({ navigation }) => {
 
             {renderTabBar()}
 
-            {loading ? (
+            {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#1e3a8a" />
                     <Text style={styles.loadingText}>Loading items...</Text>
                 </View>
+            ) : error ? (
+                renderErrorState()
             ) : (
                 <FlatList
                     data={getFilteredItems()}
                     renderItem={renderItemCard}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => item._id || item.id}
                     contentContainerStyle={styles.listContainer}
                     ListEmptyComponent={renderEmptyState}
                     showsVerticalScrollIndicator={false}
                 />
             )}
 
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => setModalVisible(true)}
-            >
-                <LinearGradient
-                    colors={['#1e3a8a', '#3b82f6']}
-                    style={styles.fabGradient}
-                >
+            <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+                <LinearGradient colors={['#1e3a8a', '#3b82f6']} style={styles.fabGradient}>
                     <Icon name="add" size={28} color="#ffffff" />
                 </LinearGradient>
             </TouchableOpacity>
 
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={handleCloseModal}
-            >
+            <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={handleCloseModal}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
@@ -419,10 +351,7 @@ const LostAndFoundScreen = ({ navigation }) => {
                         <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Type *</Text>
-                                <TouchableOpacity
-                                    style={styles.dropdownButton}
-                                    onPress={() => setShowTypeDropdown(!showTypeDropdown)}
-                                >
+                                <TouchableOpacity style={styles.dropdownButton} onPress={() => setShowTypeDropdown(!showTypeDropdown)}>
                                     <Text style={styles.dropdownText}>
                                         {type === 'lost' ? 'Lost Item' : 'Found Item'}
                                     </Text>
@@ -433,19 +362,13 @@ const LostAndFoundScreen = ({ navigation }) => {
                                     <View style={styles.dropdown}>
                                         <TouchableOpacity
                                             style={styles.dropdownItem}
-                                            onPress={() => {
-                                                setType('lost');
-                                                setShowTypeDropdown(false);
-                                            }}
+                                            onPress={() => { setType('lost'); setShowTypeDropdown(false); }}
                                         >
                                             <Text style={styles.dropdownItemText}>Lost Item</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={styles.dropdownItem}
-                                            onPress={() => {
-                                                setType('found');
-                                                setShowTypeDropdown(false);
-                                            }}
+                                            onPress={() => { setType('found'); setShowTypeDropdown(false); }}
                                         >
                                             <Text style={styles.dropdownItemText}>Found Item</Text>
                                         </TouchableOpacity>
@@ -455,13 +378,7 @@ const LostAndFoundScreen = ({ navigation }) => {
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Title *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Brief title for the item"
-                                    value={title}
-                                    onChangeText={setTitle}
-                                    maxLength={100}
-                                />
+                                <TextInput style={styles.input} placeholder="Brief title for the item" value={title} onChangeText={setTitle} maxLength={100} />
                             </View>
 
                             <View style={styles.inputGroup}>
@@ -480,12 +397,9 @@ const LostAndFoundScreen = ({ navigation }) => {
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Category</Text>
-                                <TouchableOpacity
-                                    style={styles.dropdownButton}
-                                    onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                                >
+                                <TouchableOpacity style={styles.dropdownButton} onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}>
                                     <Text style={[styles.dropdownText, !category && styles.placeholderText]}>
-                                        {category || 'Select category'}
+                                        {categories.find(cat => cat.value === category)?.label || 'Select category'}
                                     </Text>
                                     <Icon name="arrow-drop-down" size={24} color="#6b7280" />
                                 </TouchableOpacity>
@@ -494,14 +408,11 @@ const LostAndFoundScreen = ({ navigation }) => {
                                     <View style={styles.dropdown}>
                                         {categories.map((cat) => (
                                             <TouchableOpacity
-                                                key={cat}
+                                                key={cat.value}
                                                 style={styles.dropdownItem}
-                                                onPress={() => {
-                                                    setCategory(cat);
-                                                    setShowCategoryDropdown(false);
-                                                }}
+                                                onPress={() => { setCategory(cat.value); setShowCategoryDropdown(false); }}
                                             >
-                                                <Text style={styles.dropdownItemText}>{cat}</Text>
+                                                <Text style={styles.dropdownItemText}>{cat.label}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -510,55 +421,30 @@ const LostAndFoundScreen = ({ navigation }) => {
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Date {type === 'lost' ? 'Lost' : 'Found'} *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="YYYY-MM-DD"
-                                    value={dateLostOrFound}
-                                    onChangeText={setDateLostOrFound}
-                                />
+                                <TextInput style={styles.input} placeholder="YYYY-MM-DD" value={dateLostOrFound} onChangeText={setDateLostOrFound} />
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Location *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Where was it lost/found?"
-                                    value={location}
-                                    onChangeText={setLocation}
-                                />
+                                <TextInput style={styles.input} placeholder="Where was it lost/found?" value={location} onChangeText={setLocation} />
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Contact Info</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Email or phone number"
-                                    value={contactInfo}
-                                    onChangeText={setContactInfo}
-                                />
+                                <TextInput style={styles.input} placeholder="Email or phone number" value={contactInfo} onChangeText={setContactInfo} />
                             </View>
 
                             {type === 'found' && (
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.inputLabel}>Collection Info</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Where can the owner collect it?"
-                                        value={collectionInfo}
-                                        onChangeText={setCollectionInfo}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Where can the owner collect it?" value={collectionInfo} onChangeText={setCollectionInfo} />
                                 </View>
                             )}
 
                             <View style={styles.inputGroup}>
                                 <View style={styles.switchRow}>
                                     <Text style={styles.inputLabel}>Post Anonymously</Text>
-                                    <Switch
-                                        value={isAnonymous}
-                                        onValueChange={setIsAnonymous}
-                                        trackColor={{ false: '#f3f4f6', true: '#dbeafe' }}
-                                        thumbColor={isAnonymous ? '#1e3a8a' : '#9ca3af'}
-                                    />
+                                    <Switch value={isAnonymous} onValueChange={setIsAnonymous} trackColor={{ false: '#f3f4f6', true: '#dbeafe' }} thumbColor={isAnonymous ? '#1e3a8a' : '#9ca3af'} />
                                 </View>
                                 <Text style={styles.switchDescription}>
                                     Your name and ID will be hidden from other users
@@ -567,10 +453,7 @@ const LostAndFoundScreen = ({ navigation }) => {
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Photos (Optional)</Text>
-                                <TouchableOpacity
-                                    style={styles.imageButton}
-                                    onPress={selectImages}
-                                >
+                                <TouchableOpacity style={styles.imageButton} onPress={selectImages}>
                                     <Icon name="add-a-photo" size={24} color="#1e3a8a" />
                                     <Text style={styles.imageButtonText}>
                                         {itemImages.length > 0 ? `${itemImages.length} photo(s) selected` : 'Add Photos'}
@@ -582,10 +465,7 @@ const LostAndFoundScreen = ({ navigation }) => {
                                         {itemImages.map((image, index) => (
                                             <View key={index} style={styles.imageContainer}>
                                                 <Image source={{ uri: image.uri }} style={styles.selectedImage} />
-                                                <TouchableOpacity
-                                                    style={styles.removeImageButton}
-                                                    onPress={() => removeImage(index)}
-                                                >
+                                                <TouchableOpacity style={styles.removeImageButton} onPress={() => removeImage(index)}>
                                                     <Icon name="close" size={16} color="#ffffff" />
                                                 </TouchableOpacity>
                                             </View>
@@ -594,15 +474,8 @@ const LostAndFoundScreen = ({ navigation }) => {
                                 )}
                             </View>
 
-                            <TouchableOpacity
-                                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                                onPress={submitItem}
-                                disabled={submitting}
-                            >
-                                <LinearGradient
-                                    colors={submitting ? ['#9ca3af', '#6b7280'] : ['#1e3a8a', '#3b82f6']}
-                                    style={styles.submitGradient}
-                                >
+                            <TouchableOpacity style={[styles.submitButton, submitting && styles.submitButtonDisabled]} onPress={submitItem} disabled={submitting}>
+                                <LinearGradient colors={submitting ? ['#9ca3af', '#6b7280'] : ['#1e3a8a', '#3b82f6']} style={styles.submitGradient}>
                                     {submitting ? (
                                         <>
                                             <ActivityIndicator size="small" color="#ffffff" />
@@ -618,14 +491,11 @@ const LostAndFoundScreen = ({ navigation }) => {
                 </View>
             </Modal>
 
-            <CustomModal
-                {...modalConfig}
-                onClose={hideModal}
-                navigation={navigation}
-            />
+            <CustomModal {...modalConfig} onClose={hideModal} navigation={navigation} />
         </SafeAreaView>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

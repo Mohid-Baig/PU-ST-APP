@@ -301,11 +301,7 @@ const HomeScreen = ({ navigation }) => {
                 ]}
             />
 
-            <ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
+            <View style={{ paddingTop: Platform.OS === 'ios' ? 60 : 40 }}>
                 <Animated.View
                     style={[
                         styles.header,
@@ -335,7 +331,12 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.roleText}>Student • PU Smart Tracker</Text>
                     </View>
                 </Animated.View>
-
+            </View>
+            <ScrollView
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
                 <Animated.View
                     style={[
                         styles.welcomeSection,
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        // paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingBottom: 150,
     },
     header: {

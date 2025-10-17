@@ -81,6 +81,15 @@ export const api = createApi({
         }),
         getlostfound: builder.query({
             query: () => '/lostfound',
+            providesTags: ['LostFound'],
+        }),
+        postlostfound: builder.mutation({
+            query: (formData) => ({
+                url: '/lostfound',
+                method: 'POST',
+                body: formData,
+            }),
+            invalidatesTags: ['LostFound'],
         }),
         issuesReportedbyme: builder.query({
             query: () => '/report/issues/reported-by-me',
@@ -133,6 +142,7 @@ export const {
     useGetpollsQuery,
     useGetpollbyidQuery,
     useGetlostfoundQuery,
+    usePostlostfoundMutation,
     useIssuesReportedbymeQuery,
     useGethelpboardQuery,
     useGetfeedbackQuery,
