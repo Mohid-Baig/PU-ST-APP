@@ -48,34 +48,6 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
         showSuccess,
     } = useModal();
 
-    // Mock data for the item details
-    const mockItemDetails = {
-        id: '1',
-        title: 'Black iPhone 13',
-        description: 'Lost my black iPhone 13 near the library yesterday evening around 6 PM. It has a clear case with some anime stickers on the back. The phone has a small crack on the bottom right corner of the screen. It\'s very important to me as it contains all my study materials and family photos. If found, please contact me immediately. I can provide proof of ownership.',
-        type: 'lost',
-        category: 'Electronics',
-        dateLostOrFound: '2024-08-25',
-        location: 'Central Library, 2nd Floor Study Area',
-        contactInfo: 'john.doe@university.edu',
-        collectionInfo: '',
-        isAnonymous: false,
-        photos: [
-            { id: '1', uri: 'https://via.placeholder.com/400x300/000/fff?text=iPhone+13' },
-            { id: '2', uri: 'https://via.placeholder.com/400x300/333/fff?text=Case+with+Stickers' },
-        ],
-        reportedBy: {
-            name: 'John Doe',
-            uniId: 'ST2023001',
-            email: 'john.doe@university.edu',
-            department: 'Computer Science'
-        },
-        status: 'active',
-        createdAt: '2024-08-25T10:30:00Z',
-        lastUpdated: '2024-08-25T10:30:00Z',
-        views: 45,
-        bookmarks: 12
-    };
 
     const reportReasons = [
         'Spam or irrelevant content',
@@ -94,7 +66,7 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
         try {
             setLoading(true);
             setTimeout(() => {
-                setItem(mockItemDetails);
+                setItem(itemDetail);
                 setLoading(false);
             }, 1000);
         } catch (error) {
@@ -142,7 +114,6 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
 
         setSubmittingReport(true);
         try {
-            // Simulate API call
             setTimeout(() => {
                 setSubmittingReport(false);
                 setReportModalVisible(false);
@@ -207,14 +178,15 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
             >
                 {item.photos.map((photo, index) => (
                     <TouchableOpacity
-                        key={photo.id}
+                        key={photo._id}  // Changed from photo.id
                         onPress={() => openImageViewer(index)}
                         style={styles.galleryImageContainer}
                     >
                         <Image
-                            source={{ uri: photo.uri }}
+                            source={{ uri: photo.url }}
                             style={styles.galleryImage}
                             resizeMode="cover"
+                            onError={(error) => console.log('Gallery image error:', error)}
                         />
                         <View style={styles.imageOverlay}>
                             <Icon name="zoom-in" size={24} color="#ffffff" />
@@ -239,13 +211,13 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                             </Text>
                         </View>
                     </View>
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={styles.contactButton}
                         onPress={() => setContactModalVisible(true)}
                     >
-                        <Icon name="message" size={20} color="#ffffff" />
+                        <Icon name="message" size={20} color="#000" />
                         <Text style={styles.contactButtonText}>Send Message</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
             );
         }
@@ -257,15 +229,15 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                     <View style={styles.contactHeader}>
                         <View style={styles.avatarContainer}>
                             <Text style={styles.avatarText}>
-                                {item.reportedBy.name.split(' ').map(n => n[0]).join('')}
+                                {item.reportedBy?.fullName.split(' ').map(n => n[0]).join('')}
                             </Text>
                         </View>
                         <View style={styles.contactDetails}>
-                            <Text style={styles.contactName}>{item.reportedBy.name}</Text>
-                            <Text style={styles.contactId}>{item.reportedBy.uniId}</Text>
-                            {item.reportedBy.department && (
+                            <Text style={styles.contactName}>{item.reportedBy?.fullName}</Text>
+                            <Text style={styles.contactId}>{item.reportedBy?.uniId}</Text>
+                            {/* {item.reportedBy.department && (
                                 <Text style={styles.contactDepartment}>{item.reportedBy.department}</Text>
-                            )}
+                            )} */}
                         </View>
                     </View>
                     {item.contactInfo && (
@@ -276,7 +248,7 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                             <Icon
                                 name={item.contactInfo.includes('@') ? 'email' : 'phone'}
                                 size={20}
-                                color="#ffffff"
+                                color="#000"
                             />
                             <Text style={styles.contactButtonText}>
                                 {item.contactInfo.includes('@') ? 'Send Email' : 'Call Now'}
@@ -354,7 +326,7 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Item Details</Text>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={styles.headerActionButton}
                         onPress={handleBookmark}
                     >
@@ -363,7 +335,7 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                             size={24}
                             color={isBookmarked ? '#f59e0b' : '#64748b'}
                         />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                     <TouchableOpacity
                         style={styles.headerActionButton}
                         onPress={handleShare}
@@ -374,7 +346,7 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Item Header */}
+
                 <View style={styles.itemHeader}>
                     <View style={styles.titleContainer}>
                         <Text style={styles.itemTitle}>{item.title}</Text>
@@ -391,35 +363,27 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                     <Text style={styles.category}>{item.category}</Text>
                 </View>
 
-                {/* Item Stats */}
+
                 <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Icon name="visibility" size={16} color="#64748b" />
-                        <Text style={styles.statText}>{item.views} views</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Icon name="bookmark" size={16} color="#64748b" />
-                        <Text style={styles.statText}>{item.bookmarks} bookmarks</Text>
-                    </View>
+
                     <View style={styles.statItem}>
                         <Icon name="schedule" size={16} color="#64748b" />
                         <Text style={styles.statText}>{formatDate(item.createdAt)}</Text>
                     </View>
                 </View>
 
-                {/* Image Gallery */}
+
                 <View style={styles.imageSection}>
                     <Text style={styles.sectionTitle}>Photos</Text>
                     {renderImageGallery()}
                 </View>
 
-                {/* Description */}
+
                 <View style={styles.descriptionSection}>
                     <Text style={styles.sectionTitle}>Description</Text>
                     <Text style={styles.description}>{item.description}</Text>
                 </View>
 
-                {/* Details */}
                 <View style={styles.detailsSection}>
                     <Text style={styles.sectionTitle}>Details</Text>
                     <View style={styles.detailsGrid}>
@@ -453,147 +417,15 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                     </View>
                 </View>
 
-                {/* Contact Section */}
                 {renderContactSection()}
 
-                {/* Action Buttons */}
-                <View style={styles.actionSection}>
-                    <TouchableOpacity
-                        style={styles.reportButton}
-                        onPress={() => setReportModalVisible(true)}
-                    >
-                        <Icon name="flag" size={20} color="#ef4444" />
-                        <Text style={styles.reportButtonText}>Report Item</Text>
-                    </TouchableOpacity>
-                </View>
+
             </ScrollView>
 
-            {/* Contact Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={contactModalVisible}
-                onRequestClose={() => setContactModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Send Message</Text>
-                            <TouchableOpacity onPress={() => setContactModalVisible(false)}>
-                                <Icon name="close" size={24} color="#6b7280" />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.modalBody}>
-                            <Text style={styles.modalDescription}>
-                                Send a message to the person who posted this item. They will receive your message through the app.
-                            </Text>
-                            <TextInput
-                                style={styles.messageInput}
-                                placeholder="Type your message here..."
-                                multiline={true}
-                                numberOfLines={4}
-                                textAlignVertical="top"
-                            />
-                            <TouchableOpacity style={styles.sendButton}>
-                                <LinearGradient
-                                    colors={['#1e3a8a', '#3b82f6']}
-                                    style={styles.sendGradient}
-                                >
-                                    <Icon name="send" size={20} color="#ffffff" />
-                                    <Text style={styles.sendButtonText}>Send Message</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
 
-            {/* Report Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={reportModalVisible}
-                onRequestClose={() => setReportModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Report Item</Text>
-                            <TouchableOpacity onPress={() => setReportModalVisible(false)}>
-                                <Icon name="close" size={24} color="#6b7280" />
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.modalBody}>
-                            <Text style={styles.modalDescription}>
-                                Help us maintain a safe community by reporting inappropriate content.
-                            </Text>
 
-                            <Text style={styles.inputLabel}>Reason for reporting *</Text>
-                            {reportReasons.map((reason) => (
-                                <TouchableOpacity
-                                    key={reason}
-                                    style={[
-                                        styles.reasonOption,
-                                        reportReason === reason && styles.reasonOptionSelected
-                                    ]}
-                                    onPress={() => setReportReason(reason)}
-                                >
-                                    <View style={[
-                                        styles.radioButton,
-                                        reportReason === reason && styles.radioButtonSelected
-                                    ]}>
-                                        {reportReason === reason && (
-                                            <View style={styles.radioButtonInner} />
-                                        )}
-                                    </View>
-                                    <Text style={[
-                                        styles.reasonText,
-                                        reportReason === reason && styles.reasonTextSelected
-                                    ]}>
-                                        {reason}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
 
-                            <Text style={styles.inputLabel}>Additional details (Optional)</Text>
-                            <TextInput
-                                style={styles.reportTextArea}
-                                placeholder="Provide more details about your report..."
-                                value={reportDescription}
-                                onChangeText={setReportDescription}
-                                multiline={true}
-                                numberOfLines={4}
-                                textAlignVertical="top"
-                            />
 
-                            <TouchableOpacity
-                                style={[styles.submitReportButton, submittingReport && styles.submitButtonDisabled]}
-                                onPress={handleReport}
-                                disabled={submittingReport}
-                            >
-                                <LinearGradient
-                                    colors={submittingReport ? ['#9ca3af', '#6b7280'] : ['#ef4444', '#dc2626']}
-                                    style={styles.submitReportGradient}
-                                >
-                                    {submittingReport ? (
-                                        <>
-                                            <ActivityIndicator size="small" color="#ffffff" />
-                                            <Text style={[styles.submitReportText, { marginLeft: 8 }]}>Submitting...</Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Icon name="flag" size={20} color="#ffffff" />
-                                            <Text style={styles.submitReportText}>Submit Report</Text>
-                                        </>
-                                    )}
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Image Viewer Modal */}
             <Modal
                 animationType="fade"
                 transparent={true}
@@ -622,13 +454,14 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                             renderItem={({ item: photo }) => (
                                 <View style={styles.imageViewerContainer}>
                                     <Image
-                                        source={{ uri: photo.uri }}
+                                        source={{ uri: photo.url }}
                                         style={styles.imageViewerImage}
                                         resizeMode="contain"
+                                        onError={(error) => console.log('Viewer image error:', error)}
                                     />
                                 </View>
                             )}
-                            keyExtractor={(photo) => photo.id}
+                            keyExtractor={(photo) => photo._id}
                             showsHorizontalScrollIndicator={false}
                         />
                     )}
@@ -929,11 +762,13 @@ const styles = StyleSheet.create({
     contactButton: {
         borderRadius: 12,
         overflow: 'hidden',
+        // justifyContent: 'center',
+        flexDirection: 'row',
     },
     contactButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#ffffff',
+        color: '#000',
         marginLeft: 8,
     },
     anonymousContactCard: {

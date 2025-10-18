@@ -222,9 +222,8 @@ const LostAndFoundScreen = ({ navigation }) => {
     );
 
     const renderItemCard = ({ item }) => (
-        <TouchableOpacity
+        <View
             style={styles.itemCard}
-            onPress={() => navigation.navigate('ViewLostDetails', { itemDetail: item })}
         >
             <View style={styles.cardHeader}>
                 <View style={styles.cardTitleContainer}>
@@ -273,7 +272,7 @@ const LostAndFoundScreen = ({ navigation }) => {
                     <Icon name="arrow-forward-ios" size={12} color="#1e3a8a" />
                 </TouchableOpacity>
             </View>
-        </TouchableOpacity>
+        </View>
     );
 
     const renderEmptyState = () => (
