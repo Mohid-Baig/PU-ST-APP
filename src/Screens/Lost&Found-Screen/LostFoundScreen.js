@@ -29,7 +29,7 @@ const LostAndFoundScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('all');
     const [modalVisible, setModalVisible] = useState(false);
     const [items, setItems] = useState([]);
-    const [myItems, setMyItems] = useState([]);
+    const [myItems, setMyItems] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('lost');
@@ -45,7 +45,7 @@ const LostAndFoundScreen = ({ navigation }) => {
     const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
     const [postLostFound] = usePostlostfoundMutation();
-    const { data, error, isLoading } = useGetlostfoundQuery();
+    const { data, error, isLoading, refetch } = useGetlostfoundQuery(activeTab === 'my');
 
     const categories = [
         { label: 'Electronics', value: 'electronics' },
@@ -59,6 +59,7 @@ const LostAndFoundScreen = ({ navigation }) => {
         { id: 'all', label: 'All Items', icon: 'list' },
         { id: 'lost', label: 'Lost', icon: 'search' },
         { id: 'found', label: 'Found', icon: 'check-circle' },
+        { id: 'my', label: "Mine", icon: 'person' }
     ];
 
     const { modalConfig, showModal, hideModal, showError, showSuccess } = useModal();
@@ -66,9 +67,13 @@ const LostAndFoundScreen = ({ navigation }) => {
     useEffect(() => {
         if (!isLoading && data) {
             setItems(data?.items || []);
-            setMyItems(data?.items?.filter(item => item.reportedBy?.name === 'John Doe') || []);
         }
     }, [data, isLoading]);
+
+    useEffect(() => {
+        refetch();
+    }, [activeTab]);
+
 
     useEffect(() => {
         if (error) {
@@ -93,12 +98,11 @@ const LostAndFoundScreen = ({ navigation }) => {
                 return items.filter(item => item.type === 'lost');
             case 'found':
                 return items.filter(item => item.type === 'found');
-            case 'my':
-                return myItems;
             default:
                 return items;
         }
     };
+
 
     const handleCloseModal = () => {
         setModalVisible(false);
@@ -174,6 +178,7 @@ const LostAndFoundScreen = ({ navigation }) => {
             setSubmitting(false);
             setModalVisible(false);
             resetForm();
+            refetch();
             showSuccess('Success', `${type === 'lost' ? 'Lost' : 'Found'} item posted successfully!`);
         } catch (error) {
             console.error('Submit error:', error);
@@ -267,7 +272,11 @@ const LostAndFoundScreen = ({ navigation }) => {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-                <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('ViewLostDetails', { itemDetail: item })}>
+                <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('ViewLostDetails', {
+                    itemDetail: item,
+                    Allitems: data.items,
+                    refetchitems: refetch,
+                })}>
                     <Text style={styles.viewButtonText}>View Details</Text>
                     <Icon name="arrow-forward-ios" size={12} color="#1e3a8a" />
                 </TouchableOpacity>

@@ -22,18 +22,18 @@ instance.interceptors.request.use(async config => {
 instance.interceptors.response.use(
     response => {
         console.log(
-            `[API Response] ✅ ${response.status} → ${response.config.url}`
+            `[API Response]  ${response.status} → ${response.config.url}`
         );
         return response;
     },
     async error => {
         if (error.response) {
             console.log(
-                `[API Error] ❌ ${error.response.status} → ${error.config.url}`,
+                `[API Error]  ${error.response.status} → ${error.config.url}`,
                 error.response.data
             );
         } else {
-            console.log("[API Error] ❌ Network/Timeout:", error.message);
+            console.log("[API Error]  Network/Timeout:", error.message);
         }
 
         if (error.response?.status === 401) {

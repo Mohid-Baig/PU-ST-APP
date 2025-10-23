@@ -80,7 +80,10 @@ export const api = createApi({
             query: (id) => `/polls/${id}`,
         }),
         getlostfound: builder.query({
-            query: () => '/lostfound',
+            query: (mine = false) => ({
+                url: mine ? '/lostfound?mine=true' : '/lostfound',
+                method: 'GET',
+            }),
             providesTags: ['LostFound'],
         }),
         postlostfound: builder.mutation({
@@ -91,6 +94,17 @@ export const api = createApi({
             }),
             invalidatesTags: ['LostFound'],
         }),
+        matchLostFound: builder.mutation({
+            query: (data) => ({
+                url: '/lostfound/match',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['LostFound'],
+        }),
+
+
+
         issuesReportedbyme: builder.query({
             query: () => '/report/issues/reported-by-me',
             providesTags: ['Issues'],
@@ -143,6 +157,7 @@ export const {
     useGetpollbyidQuery,
     useGetlostfoundQuery,
     usePostlostfoundMutation,
+    useMatchLostFoundMutation,
     useIssuesReportedbymeQuery,
     useGethelpboardQuery,
     useGetfeedbackQuery,
