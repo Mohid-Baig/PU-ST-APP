@@ -22,14 +22,15 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
+
 const { width, height } = Dimensions.get('window');
+
 const HelpBoardScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('all');
     const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [posts, setPosts] = useState([]);
     const [myPosts, setMyPosts] = useState([]);
-    const [expandedComments, setExpandedComments] = useState({});
     const [commentTexts, setCommentTexts] = useState({});
     const [submittingComments, setSubmittingComments] = useState({});
     const [title, setTitle] = useState('');
@@ -39,22 +40,25 @@ const HelpBoardScreen = ({ navigation }) => {
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-    // New state for comments modal
     const [commentsModalVisible, setCommentsModalVisible] = useState(false);
     const [currentPostForComments, setCurrentPostForComments] = useState(null);
+
     const commentInputRefs = useRef({});
     const flatListRef = useRef(null);
     const commentsFlatListRef = useRef(null);
+
     const categories = [
         { id: 'academic', label: 'Academic Help', icon: 'school' },
         { id: 'material', label: 'Material Sharing', icon: 'book' },
         { id: 'study', label: 'Group Study', icon: 'group' },
         { id: 'personal', label: 'Personal Issues', icon: 'support' }
     ];
+
     const tabs = [
         { id: 'all', label: 'All Posts', icon: 'list' },
         ...categories
     ];
+
     const {
         modalConfig,
         showModal,
@@ -62,6 +66,7 @@ const HelpBoardScreen = ({ navigation }) => {
         showError,
         showSuccess,
     } = useModal();
+
     const mockPosts = [
         {
             id: '1',
@@ -81,8 +86,6 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
                     },
                     message: `I can help! I'm free tomorrow at 3 PM in the library.`,
-                    likes: 2,
-                    liked: false,
                     createdAt: '2024-08-25T14:30:00Z'
                 },
                 {
@@ -93,8 +96,6 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
                     },
                     message: `Check out Khan Academy's integration section. Really helpful!`,
-                    likes: 1,
-                    liked: true,
                     createdAt: '2024-08-25T15:45:00Z'
                 }
             ],
@@ -123,8 +124,6 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
                     },
                     message: `I'd love the Python book! When can I pick it up?`,
-                    likes: 0,
-                    liked: false,
                     createdAt: '2024-08-24T17:20:00Z'
                 }
             ],
@@ -153,8 +152,6 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
                     },
                     message: 'Count me in! When are you thinking?',
-                    likes: 3,
-                    liked: false,
                     createdAt: '2024-08-24T18:20:00Z'
                 },
                 {
@@ -165,8 +162,6 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
                     },
                     message: `I'd like to join too! Maybe we can meet in the CS building?`,
-                    likes: 2,
-                    liked: true,
                     createdAt: '2024-08-24T19:15:00Z'
                 }
             ],
@@ -178,9 +173,11 @@ const HelpBoardScreen = ({ navigation }) => {
             createdAt: '2024-08-24T15:20:00Z'
         }
     ];
+
     useEffect(() => {
         fetchPosts();
     }, []);
+
     const fetchPosts = async () => {
         try {
             setTimeout(() => {
@@ -193,14 +190,17 @@ const HelpBoardScreen = ({ navigation }) => {
             setLoading(false);
         }
     };
+
     const getFilteredPosts = () => {
         if (activeTab === 'all') return posts;
         return posts.filter(post => post.category === activeTab);
     };
+
     const handleCloseModal = () => {
         setModalVisible(false);
         resetForm();
     };
+
     const resetForm = () => {
         setTitle('');
         setMessage('');
@@ -209,6 +209,7 @@ const HelpBoardScreen = ({ navigation }) => {
         setIsAnonymous(false);
         setShowCategoryDropdown(false);
     };
+
     const handleLikePost = async (postId) => {
         try {
             const updatedPosts = posts.map(post => {
@@ -226,51 +227,30 @@ const HelpBoardScreen = ({ navigation }) => {
             console.log('Error liking post:', error);
         }
     };
-    const handleLikeComment = async (postId, commentId) => {
-        try {
-            const updatedPosts = posts.map(post => {
-                if (post.id === postId) {
-                    const updatedComments = post.comments.map(comment => {
-                        if (comment.id === commentId) {
-                            return {
-                                ...comment,
-                                liked: !comment.liked,
-                                likes: comment.liked ? comment.likes - 1 : comment.likes + 1
-                            };
-                        }
-                        return comment;
-                    });
-                    return { ...post, comments: updatedComments };
-                }
-                return post;
-            });
-            setPosts(updatedPosts);
-        } catch (error) {
-            console.log('Error liking comment:', error);
-        }
-    };
-    // Modified to open comments modal
+
     const openCommentsModal = (post) => {
         setCurrentPostForComments(post);
         setCommentsModalVisible(true);
-        // Focus on comment input when modal opens
         setTimeout(() => {
             if (commentInputRefs.current[post.id]) {
                 commentInputRefs.current[post.id].focus();
             }
         }, 300);
     };
+
     const closeCommentsModal = () => {
         setCommentsModalVisible(false);
         setCurrentPostForComments(null);
         Keyboard.dismiss();
     };
+
     const handleCommentSubmit = async (postId) => {
         const commentText = commentTexts[postId]?.trim();
         if (!commentText) return;
+
         setSubmittingComments(prev => ({ ...prev, [postId]: true }));
+
         try {
-            // Simulate API call
             setTimeout(() => {
                 const newComment = {
                     id: Date.now().toString(),
@@ -280,10 +260,9 @@ const HelpBoardScreen = ({ navigation }) => {
                         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
                     },
                     message: commentText,
-                    likes: 0,
-                    liked: false,
                     createdAt: new Date().toISOString()
                 };
+
                 const updatedPosts = posts.map(post => {
                     if (post.id === postId) {
                         return {
@@ -293,11 +272,19 @@ const HelpBoardScreen = ({ navigation }) => {
                     }
                     return post;
                 });
+
                 setPosts(updatedPosts);
+
+                if (currentPostForComments && currentPostForComments.id === postId) {
+                    setCurrentPostForComments({
+                        ...currentPostForComments,
+                        comments: [...currentPostForComments.comments, newComment]
+                    });
+                }
+
                 setCommentTexts(prev => ({ ...prev, [postId]: '' }));
                 setSubmittingComments(prev => ({ ...prev, [postId]: false }));
 
-                // Scroll to bottom after adding comment
                 setTimeout(() => {
                     if (commentsFlatListRef.current) {
                         commentsFlatListRef.current.scrollToEnd({ animated: true });
@@ -310,12 +297,15 @@ const HelpBoardScreen = ({ navigation }) => {
             showError('Error', 'Failed to post comment');
         }
     };
+
     const submitPost = async () => {
         if (!title.trim() || !message.trim()) {
             showError('Error', 'Please fill in title and message');
             return;
         }
+
         setSubmitting(true);
+
         try {
             setTimeout(() => {
                 const newPost = {
@@ -335,6 +325,7 @@ const HelpBoardScreen = ({ navigation }) => {
                     },
                     createdAt: new Date().toISOString()
                 };
+
                 setPosts([newPost, ...posts]);
                 setSubmitting(false);
                 setModalVisible(false);
@@ -347,29 +338,37 @@ const HelpBoardScreen = ({ navigation }) => {
             showError('Error', 'Failed to create post. Please try again.');
         }
     };
+
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         const now = new Date();
         const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
         if (diffInMinutes < 1) return 'Just now';
         if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
         const diffInHours = Math.floor(diffInMinutes / 60);
         if (diffInHours < 24) return `${diffInHours}h ago`;
+
         const diffInDays = Math.floor(diffInHours / 24);
         if (diffInDays < 7) return `${diffInDays}d ago`;
+
         return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric'
         });
     };
+
     const getCategoryIcon = (categoryId) => {
         const category = categories.find(cat => cat.id === categoryId);
         return category ? category.icon : 'help';
     };
+
     const getCategoryLabel = (categoryId) => {
         const category = categories.find(cat => cat.id === categoryId);
         return category ? category.label : 'Help';
     };
+
     const renderTabItem = ({ item }) => (
         <TouchableOpacity
             style={[styles.tab, activeTab === item.id && styles.activeTab]}
@@ -385,6 +384,7 @@ const HelpBoardScreen = ({ navigation }) => {
             </Text>
         </TouchableOpacity>
     );
+
     const renderTabBar = () => (
         <View style={styles.tabContainer}>
             <FlatList
@@ -397,7 +397,8 @@ const HelpBoardScreen = ({ navigation }) => {
             />
         </View>
     );
-    const renderComment = ({ item, index }) => (
+
+    const renderComment = ({ item }) => (
         <View style={styles.commentItem}>
             <Image source={{ uri: item.user.avatar }} style={styles.commentAvatar} />
             <View style={styles.commentContent}>
@@ -406,95 +407,87 @@ const HelpBoardScreen = ({ navigation }) => {
                     <Text style={styles.commentTime}>{formatDate(item.createdAt)}</Text>
                 </View>
                 <Text style={styles.commentText}>{item.message}</Text>
-                <View style={styles.commentActions}>
-                    <TouchableOpacity
-                        style={styles.commentLikeButton}
-                        onPress={() => handleLikeComment(currentPostForComments.id, item.id)}
-                    >
-                        <Icon
-                            name={item.liked ? 'favorite' : 'favorite-border'}
-                            size={14}
-                            color={item.liked ? '#ef4444' : '#94a3b8'}
-                        />
-                        {item.likes > 0 && (
-                            <Text style={[styles.commentLikeText, item.liked && styles.commentLikedText]}>
-                                {item.likes}
-                            </Text>
-                        )}
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.commentReplyButton}>
-                        <Icon name="reply" size={14} color="#94a3b8" />
-                        <Text style={styles.commentReplyText}>Reply</Text>
-                    </TouchableOpacity>
-                </View>
             </View>
         </View>
     );
+
     const renderPostCard = ({ item }) => {
-        const commentText = commentTexts[item.id] || '';
-        const isSubmittingComment = submittingComments[item.id];
         return (
-            <View style={styles.postCard}>
-                <View style={styles.postHeader}>
-                    {item.reportedBy && !item.isAnonymous ? (
-                        <View style={styles.userInfo}>
-                            <Image source={{ uri: item.reportedBy.profileImage }} style={styles.avatar} />
-                            <View>
-                                <Text style={styles.userName}>{item.reportedBy.name}</Text>
-                                <Text style={styles.userId}>{item.reportedBy.uniId}</Text>
+            <View style={styles.issueCard}>
+                <View style={styles.cardHeader}>
+                    <View style={styles.cardTitleContainer}>
+                        <Text style={styles.cardTitle}>{item.title}</Text>
+                        <View style={styles.categoryBadge}>
+                            <Icon name={getCategoryIcon(item.category)} size={14} color="#1e3a8a" />
+                            <Text style={styles.categoryText}>{getCategoryLabel(item.category)}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.userInfoContainer}>
+                        {item.reportedBy && !item.isAnonymous ? (
+                            <View style={styles.userInfo}>
+                                <Image source={{ uri: item.reportedBy.profileImage }} style={styles.avatar} />
+                                <View style={styles.userDetails}>
+                                    <Text style={styles.userName}>{item.reportedBy.name}</Text>
+                                    <Text style={styles.userId}>{item.reportedBy.uniId}</Text>
+                                </View>
                             </View>
-                        </View>
-                    ) : (
-                        <View style={styles.anonymousInfo}>
-                            <Icon name="visibility-off" size={16} color="#64748b" />
-                            <Text style={styles.anonymousText}>Anonymous User</Text>
-                        </View>
-                    )}
-                    <Text style={styles.postTime}>{formatDate(item.createdAt)}</Text>
+                        ) : (
+                            <View style={styles.userInfo}>
+                                <View style={styles.anonymousAvatar}>
+                                    <Icon name="visibility-off" size={20} color="#94a3b8" />
+                                </View>
+                                <View style={styles.userDetails}>
+                                    <Text style={styles.userName}>Anonymous</Text>
+                                    <Text style={styles.userId}>Hidden</Text>
+                                </View>
+                            </View>
+                        )}
+                    </View>
                 </View>
-                <View style={styles.categoryBadge}>
-                    <Icon name={getCategoryIcon(item.category)} size={14} color="#1e3a8a" />
-                    <Text style={styles.categoryText}>{getCategoryLabel(item.category)}</Text>
-                </View>
-                <Text style={styles.postTitle}>{item.title}</Text>
-                <Text style={styles.postMessage}>{item.message}</Text>
+
+                <Text style={styles.cardDescription} numberOfLines={3}>
+                    {item.message}
+                </Text>
+
                 {item.contactInfo && (
                     <View style={styles.contactInfo}>
                         <Icon name="contact-mail" size={16} color="#64748b" />
                         <Text style={styles.contactText}>{item.contactInfo}</Text>
                     </View>
                 )}
-                <View style={styles.postActions}>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => handleLikePost(item.id)}
-                    >
-                        <Icon
-                            name={item.liked ? 'favorite' : 'favorite-border'}
-                            size={20}
-                            color={item.liked ? '#ef4444' : '#64748b'}
-                        />
-                        <Text style={[styles.actionText, item.liked && styles.likedText]}>
-                            {item.likes} {item.likes === 1 ? 'Like' : 'Likes'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => openCommentsModal(item)}
-                    >
-                        <Icon name="chat-bubble-outline" size={20} color="#64748b" />
-                        <Text style={styles.actionText}>
-                            {item.comments.length} {item.comments.length === 1 ? 'Comment' : 'Comments'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Icon name="share" size={20} color="#64748b" />
-                        <Text style={styles.actionText}>Share</Text>
-                    </TouchableOpacity>
+
+                <View style={styles.cardFooter}>
+                    <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+                    <View style={styles.postActions}>
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => handleLikePost(item.id)}
+                        >
+                            <Icon
+                                name={item.liked ? 'favorite' : 'favorite-border'}
+                                size={20}
+                                color={item.liked ? '#ef4444' : '#64748b'}
+                            />
+                            <Text style={[styles.actionText, item.liked && styles.likedText]}>
+                                {item.likes}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => openCommentsModal(item)}
+                        >
+                            <Icon name="chat-bubble-outline" size={20} color="#64748b" />
+                            <Text style={styles.actionText}>
+                                {item.comments.length}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         );
     };
+
     const renderCategoryDropdownItem = ({ item }) => (
         <TouchableOpacity
             style={styles.dropdownItem}
@@ -507,6 +500,7 @@ const HelpBoardScreen = ({ navigation }) => {
             <Text style={styles.dropdownItemText}>{item.label}</Text>
         </TouchableOpacity>
     );
+
     const renderEmptyState = () => (
         <View style={styles.emptyContainer}>
             <Icon name="forum" size={64} color="#d1d5db" />
@@ -516,7 +510,7 @@ const HelpBoardScreen = ({ navigation }) => {
             </Text>
         </View>
     );
-    // Render comments modal
+
     const renderCommentsModal = () => {
         if (!currentPostForComments) return null;
 
@@ -559,6 +553,7 @@ const HelpBoardScreen = ({ navigation }) => {
                             showsVerticalScrollIndicator={false}
                             ListEmptyComponent={
                                 <View style={styles.commentsEmptyContainer}>
+                                    <Icon name="chat-bubble-outline" size={48} color="#d1d5db" />
                                     <Text style={styles.commentsEmptyText}>No comments yet</Text>
                                     <Text style={styles.commentsEmptySubtext}>Be the first to comment</Text>
                                 </View>
@@ -598,9 +593,11 @@ const HelpBoardScreen = ({ navigation }) => {
             </Modal>
         );
     };
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
@@ -611,7 +608,9 @@ const HelpBoardScreen = ({ navigation }) => {
                 <Text style={styles.headerTitle}>Help Board</Text>
                 <View style={styles.headerRight} />
             </View>
+
             {renderTabBar()}
+
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#1e3a8a" />
@@ -626,13 +625,9 @@ const HelpBoardScreen = ({ navigation }) => {
                     contentContainerStyle={styles.listContainer}
                     ListEmptyComponent={renderEmptyState}
                     showsVerticalScrollIndicator={false}
-                    onEndReachedThreshold={0.5}
-                    onEndReached={() => {
-                        // Load more posts when user reaches the end
-                        // This is where you would implement pagination
-                    }}
                 />
             )}
+
             <TouchableOpacity
                 style={styles.fab}
                 onPress={() => setModalVisible(true)}
@@ -644,6 +639,7 @@ const HelpBoardScreen = ({ navigation }) => {
                     <Icon name="add" size={28} color="#ffffff" />
                 </LinearGradient>
             </TouchableOpacity>
+
             <Modal
                 animationType="slide"
                 transparent={true}
@@ -661,6 +657,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                 <Icon name="close" size={24} color="#6b7280" />
                             </TouchableOpacity>
                         </View>
+
                         <FlatList
                             style={styles.modalForm}
                             showsVerticalScrollIndicator={false}
@@ -688,6 +685,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                             </View>
                                         )}
                                     </View>
+
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.inputLabel}>Title *</Text>
                                         <TextInput
@@ -698,6 +696,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                             maxLength={100}
                                         />
                                     </View>
+
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.inputLabel}>Message *</Text>
                                         <TextInput
@@ -711,6 +710,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                             maxLength={500}
                                         />
                                     </View>
+
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.inputLabel}>Contact Information</Text>
                                         <TextInput
@@ -720,6 +720,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                             onChangeText={setContactInfo}
                                         />
                                     </View>
+
                                     <View style={styles.inputGroup}>
                                         <View style={styles.switchRow}>
                                             <Text style={styles.inputLabel}>Post Anonymously</Text>
@@ -734,6 +735,7 @@ const HelpBoardScreen = ({ navigation }) => {
                                             Your name and profile will be hidden
                                         </Text>
                                     </View>
+
                                     <TouchableOpacity
                                         style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
                                         onPress={submitPost}
@@ -760,7 +762,9 @@ const HelpBoardScreen = ({ navigation }) => {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
             {renderCommentsModal()}
+
             <CustomModal
                 {...modalConfig}
                 onClose={hideModal}
@@ -769,10 +773,11 @@ const HelpBoardScreen = ({ navigation }) => {
         </SafeAreaView>
     );
 };
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
     },
     header: {
         flexDirection: 'row',
@@ -830,54 +835,41 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingBottom: 80,
     },
-    postCard: {
+    // Updated card styles to match ReportIssuesScreen
+    issueCard: {
         backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 16,
+        padding: 20,
         marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
-    postHeader: {
+    cardHeader: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
         marginBottom: 12,
     },
-    userInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    cardTitleContainer: {
+        flex: 1,
+        marginRight: 12,
     },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 10,
-    },
-    userName: {
-        fontSize: 16,
+    cardTitle: {
+        fontSize: 18,
         fontWeight: '600',
         color: '#1e293b',
-    },
-    userId: {
-        fontSize: 12,
-        color: '#64748b',
-    },
-    anonymousInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    anonymousText: {
-        fontSize: 14,
-        color: '#64748b',
-        marginLeft: 6,
-    },
-    postTime: {
-        fontSize: 12,
-        color: '#94a3b8',
+        marginBottom: 4,
     },
     categoryBadge: {
         flexDirection: 'row',
@@ -887,7 +879,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 16,
         alignSelf: 'flex-start',
-        marginBottom: 12,
+        marginTop: 4,
     },
     categoryText: {
         fontSize: 12,
@@ -895,38 +887,78 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         fontWeight: '500',
     },
-    postTitle: {
-        fontSize: 18,
+    userInfoContainer: {
+        alignItems: 'flex-end',
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        marginRight: 8,
+    },
+    anonymousAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+    },
+    userDetails: {
+        alignItems: 'flex-end',
+    },
+    userName: {
+        fontSize: 14,
         fontWeight: '600',
         color: '#1e293b',
-        marginBottom: 8,
     },
-    postMessage: {
+    userId: {
+        fontSize: 12,
+        color: '#64748b',
+    },
+    cardDescription: {
         fontSize: 16,
         color: '#334155',
         lineHeight: 24,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     contactInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
+        backgroundColor: '#f8fafc',
+        padding: 8,
+        borderRadius: 8,
     },
     contactText: {
         fontSize: 14,
         color: '#64748b',
         marginLeft: 6,
     },
-    postActions: {
+    cardFooter: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: 12,
         borderTopWidth: 1,
         borderTopColor: '#f1f5f9',
-        paddingTop: 12,
+    },
+    cardDate: {
+        fontSize: 12,
+        color: '#94a3b8',
+    },
+    postActions: {
+        flexDirection: 'row',
     },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 24,
+        marginLeft: 16,
     },
     actionText: {
         fontSize: 14,
@@ -1202,33 +1234,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#334155',
         lineHeight: 20,
-        marginBottom: 8,
-    },
-    commentActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    commentLikeButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    commentLikeText: {
-        fontSize: 12,
-        color: '#94a3b8',
-        marginLeft: 4,
-    },
-    commentLikedText: {
-        color: '#ef4444',
-    },
-    commentReplyButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    commentReplyText: {
-        fontSize: 12,
-        color: '#94a3b8',
-        marginLeft: 4,
     },
     commentInputContainer: {
         position: 'absolute',
@@ -1273,4 +1278,5 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
 });
+
 export default HelpBoardScreen;

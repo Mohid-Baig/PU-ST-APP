@@ -14,7 +14,8 @@ import {
     Dimensions,
     Linking,
     Share,
-    FlatList
+    FlatList,
+    TextInput
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -36,6 +37,8 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
     const [matchModalVisible, setMatchModalVisible] = useState(false);
     const [selectedMatchItem, setSelectedMatchItem] = useState(null);
     const [lostItems, setLostItems] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filteredLostItems, setFilteredLostItems] = useState([]);
 
     const { modalConfig, showModal, hideModal, showError, showSuccess } = useModal();
 
@@ -44,8 +47,21 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
         if (Allitems) {
             const filteredLostItems = Allitems.filter(i => i.type === 'lost');
             setLostItems(filteredLostItems);
+            setFilteredLostItems(filteredLostItems);
         }
     }, [itemDetail, Allitems]);
+
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setFilteredLostItems(lostItems);
+        } else {
+            const query = searchQuery.toLowerCase();
+            const filtered = lostItems.filter(item =>
+                item.title.toLowerCase().includes(query)
+            );
+            setFilteredLostItems(filtered);
+        }
+    }, [searchQuery, lostItems]);
 
     const fetchItemDetails = async () => {
         try {
@@ -96,6 +112,8 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
             return;
         }
         setMatchModalVisible(true);
+        setSearchQuery('');
+        setFilteredLostItems(lostItems);
     };
 
     const handleMatchSubmit = async () => {
@@ -131,9 +149,6 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
             showError('Error', errorMessage);
         }
     };
-
-
-
 
     const openImageViewer = (index) => {
         setSelectedImageIndex(index);
@@ -395,17 +410,32 @@ const ViewLostDetailsScreen = ({ navigation, route }) => {
                                 <Icon name="close" size={24} color="#64748b" />
                             </TouchableOpacity>
                         </View>
-                        <ScrollView style={styles.modalBody}>
-                            <Text style={styles.modalDescription}>Select a lost item that matches with the found item "{item.title}"</Text>
-                            {lostItems.length > 0 ? (
-                                <FlatList data={lostItems} renderItem={renderMatchItemCard} keyExtractor={(item) => item._id} scrollEnabled={false} contentContainerStyle={styles.matchItemsList} />
-                            ) : (
+
+                        <View style={styles.searchContainer}>
+                            <Icon name="search" size={20} color="#64748b" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search by title..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                        </View>
+
+                        <FlatList
+                            data={filteredLostItems}
+                            renderItem={renderMatchItemCard}
+                            keyExtractor={(item) => item._id}
+                            contentContainerStyle={styles.matchItemsList}
+                            ListEmptyComponent={
                                 <View style={styles.noItemsContainer}>
                                     <Icon name="search-off" size={48} color="#d1d5db" />
-                                    <Text style={styles.noItemsText}>No lost items available</Text>
+                                    <Text style={styles.noItemsText}>
+                                        {searchQuery ? 'No matching items found' : 'No lost items available'}
+                                    </Text>
                                 </View>
-                            )}
-                        </ScrollView>
+                            }
+                        />
+
                         {lostItems.length > 0 && (
                             <View style={styles.modalFooter}>
                                 <TouchableOpacity style={[styles.matchSubmitButton, !selectedMatchItem && styles.matchSubmitButtonDisabled]} onPress={handleMatchSubmit} disabled={!selectedMatchItem}>
@@ -506,10 +536,29 @@ const styles = StyleSheet.create({
     modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 20, maxHeight: '80%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
     modalTitle: { fontSize: 20, fontWeight: '700', color: '#1e293b' },
-    modalBody: { paddingHorizontal: 20, paddingVertical: 20 },
-    modalDescription: { fontSize: 16, color: '#64748b', lineHeight: 24, marginBottom: 20 },
-    matchItemsList: { gap: 12 },
-    matchItemCard: { flexDirection: 'row', backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, borderWidth: 2, borderColor: 'transparent' },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f1f5f9',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        marginHorizontal: 20,
+        marginTop: 10,
+        marginBottom: 8
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        color: '#1e293b',
+        marginLeft: 8
+    },
+    matchItemsList: {
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        paddingBottom: 20
+    },
+    matchItemCard: { flexDirection: 'row', backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, borderWidth: 2, borderColor: 'transparent', marginBottom: 12 },
     matchItemCardSelected: { borderColor: '#1e3a8a', backgroundColor: '#dbeafe' },
     matchItemImageContainer: { position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', marginRight: 12 },
     matchItemImage: { width: '100%', height: '100%' },
