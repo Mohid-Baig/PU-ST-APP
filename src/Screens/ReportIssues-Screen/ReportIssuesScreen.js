@@ -41,18 +41,19 @@ const ReportIssuesScreen = ({ navigation }) => {
         data: Issuesbyme,
         error: myIssuesError,
         isLoading: myIssuesLoading,
+        refetch: refetchIssues,
     } = useIssuesReportedbymeQuery();
+
     const [postIssues] = usePostIssuesMutation();
-    // console.log(JSON.stringify(Issuesbyme), 'data');
 
     const categories = [
-        'Cleanliness',
-        'Safety',
-        'Environment',
-        'Drainage',
-        'Construction',
-        'Broken_resources',
-        'Other'
+        { label: 'Cleanliness', value: 'Cleanliness' },
+        { label: 'Safety', value: 'safety' },
+        { label: 'Environment', value: 'enviornment' },
+        { label: 'Drainage', value: 'drainage' },
+        { label: 'Construction', value: 'construction' },
+        { label: 'Broken Resources', value: 'broken_resources' },
+        { label: 'Other', value: 'other' },
     ];
 
     const {
@@ -197,26 +198,47 @@ const ReportIssuesScreen = ({ navigation }) => {
             includeBase64: false,
             maxHeight: 2000,
             maxWidth: 2000,
+            quality: 0.8,
         };
 
         launchImageLibrary(options, (response) => {
-            if (response.didCancel || response.error) {
+            if (response.didCancel) {
+                console.log('User cancelled image picker');
                 return;
             }
+
+            if (response.error) {
+                console.log('ImagePicker Error: ', response.error);
+                showError('Error', 'Failed to select image. Please try again.');
+                return;
+            }
+
             if (response.assets && response.assets[0]) {
+                console.log('Image selected:', response.assets[0].uri);
                 setIssueImage(response.assets[0]);
             }
         });
     };
 
     const submitIssue = async () => {
-        if (!title.trim() || !description.trim() || !category) {
-            showError('Error', 'Please fill in all required fields');
+        // Validate required fields
+        if (!title.trim()) {
+            showError('Error', 'Please enter a title');
+            return;
+        }
+
+        if (!description.trim()) {
+            showError('Error', 'Please enter a description');
+            return;
+        }
+
+        if (!category) {
+            showError('Error', 'Please select a category');
             return;
         }
 
         if (!location) {
-            showError('Error', 'Location is required');
+            showError('Error', 'Please capture your location');
             return;
         }
 
@@ -225,33 +247,23 @@ const ReportIssuesScreen = ({ navigation }) => {
         try {
             const formData = new FormData();
 
-            formData.append('title', title);
-            formData.append('description', description);
+            formData.append('title', title.trim());
+            formData.append('description', description.trim());
             formData.append('category', category);
-
             formData.append('location', JSON.stringify(location));
 
             if (issueImage) {
-                formData.append('issueImage', {
+                const imageData = {
                     uri: issueImage.uri,
                     type: issueImage.type || 'image/jpeg',
-                    name: issueImage.fileName || `photo_${Date.now()}.jpg`,
-                });
+                    name: issueImage.fileName || `issue_${Date.now()}.jpg`,
+                };
+
+                console.log('Adding image to form:', imageData);
+                formData.append('issueImage', imageData);
             }
 
-            console.log('Submitting form data with fields:');
-            for (let [key, value] of formData._parts) {
-                if (key === 'issueImage') {
-                    console.log(key, {
-                        uri: value.uri,
-                        type: value.type,
-                        name: value.name
-                    });
-                } else {
-                    console.log(key, value);
-                }
-            }
-
+            console.log('Submitting issue...');
             const response = await postIssues(formData).unwrap();
             console.log('Issue submitted successfully:', response);
 
@@ -259,35 +271,37 @@ const ReportIssuesScreen = ({ navigation }) => {
             setModalVisible(false);
             resetForm();
 
+            // Refetch issues list
+            refetchIssues();
+
             showModal({
                 title: 'Success',
-                message: 'Issue Submitted Successfully!',
+                message: 'Issue submitted successfully!',
                 type: 'success',
             });
 
         } catch (error) {
             console.error('Error submitting issue:', error);
-
-            if (error.originalStatus) {
-                console.log('Original status:', error.originalStatus);
-            }
-            if (error.data) {
-                console.log('Error data:', error.data);
-                console.log('Error data type:', typeof error.data);
-            }
-
             setSubmitting(false);
 
-            if (error.status === 'PARSING_ERROR') {
-                showError('Server Error',
-                    'The server returned an invalid response. Please try again later.');
-            } else {
-                showError('Error',
-                    error?.data?.message || 'Failed to submit issue. Please try again.');
+            let errorMessage = 'Failed to submit issue. Please try again.';
+
+            // Handle different error types
+            if (error.status === 'FETCH_ERROR') {
+                errorMessage = 'Network error. Please check your internet connection.';
+            } else if (error.status === 401) {
+                errorMessage = 'Your session has expired. Please login again.';
+            } else if (error.status === 400) {
+                errorMessage = error?.data?.message || 'Invalid data. Please check all fields.';
+            } else if (error.status === 500) {
+                errorMessage = error?.data?.message || 'Server error. Please try again later.';
+            } else if (error?.data?.message) {
+                errorMessage = error.data.message;
             }
+
+            showError('Submission Failed', errorMessage);
         }
     };
-
 
     const resetForm = () => {
         setTitle('');
@@ -332,7 +346,9 @@ const ReportIssuesScreen = ({ navigation }) => {
             <View style={styles.cardHeader}>
                 <View style={styles.cardTitleContainer}>
                     <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Text style={styles.cardCategory}>{item.category.replace('_', ' ')}</Text>
+                    <Text style={styles.cardCategory}>
+                        {categories.find(cat => cat.value === item.category)?.label || item.category}
+                    </Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
                     <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
@@ -379,8 +395,29 @@ const ReportIssuesScreen = ({ navigation }) => {
         </View>
     );
 
-    // Get issues from API response
+    const renderListHeader = () => (
+        <>
+            {renderHeaderComponent()}
+        </>
+    );
+
+    const renderContent = () => {
+        if (myIssues.length === 0) {
+            return (
+                <>
+                    {renderHeaderComponent()}
+                    {renderEmptyComponent()}
+                </>
+            );
+        }
+        return null;
+    };
+
+    // Get issues from API response - this handles both empty array and undefined
     const myIssues = Issuesbyme?.issues || [];
+
+    // Check if there's an actual error (not just empty results)
+    const hasRealError = myIssuesError && myIssuesError.status !== 404;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -402,14 +439,16 @@ const ReportIssuesScreen = ({ navigation }) => {
                     <ActivityIndicator size="large" color="#1e3a8a" />
                     <Text style={styles.loadingText}>Loading your issues...</Text>
                 </View>
-            ) : myIssuesError ? (
+            ) : hasRealError ? (
                 <View style={styles.errorContainer}>
                     <Icon name="error" size={64} color="#ef4444" />
                     <Text style={styles.errorTitle}>Error Loading Issues</Text>
-                    <Text style={styles.errorSubtitle}>Please check your connection and try again</Text>
+                    <Text style={styles.errorSubtitle}>
+                        {myIssuesError?.data?.message || 'Please check your connection and try again'}
+                    </Text>
                     <TouchableOpacity
                         style={styles.retryButton}
-                        onPress={() => navigation.goBack()}
+                        onPress={() => refetchIssues()}
                     >
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
@@ -420,9 +459,14 @@ const ReportIssuesScreen = ({ navigation }) => {
                     data={myIssues}
                     renderItem={renderIssueCard}
                     keyExtractor={(item) => item._id}
-                    ListHeaderComponent={renderHeaderComponent}
-                    ListEmptyComponent={renderEmptyComponent}
-                    contentContainerStyle={myIssues.length === 0 ? styles.emptyListContainer : styles.issuesList}
+                    ListHeaderComponent={myIssues.length > 0 ? renderHeaderComponent : null}
+                    ListEmptyComponent={
+                        <View style={styles.emptyWrapper}>
+                            {renderHeaderComponent()}
+                            {renderEmptyComponent()}
+                        </View>
+                    }
+                    contentContainerStyle={myIssues.length === 0 ? styles.emptyContentContainer : styles.issuesList}
                     showsVerticalScrollIndicator={false}
                 />
             )}
@@ -463,6 +507,7 @@ const ReportIssuesScreen = ({ navigation }) => {
                                     value={title}
                                     onChangeText={setTitle}
                                     maxLength={100}
+                                    placeholderTextColor="#9ca3af"
                                 />
                             </View>
 
@@ -477,6 +522,7 @@ const ReportIssuesScreen = ({ navigation }) => {
                                     numberOfLines={4}
                                     textAlignVertical="top"
                                     maxLength={500}
+                                    placeholderTextColor="#9ca3af"
                                 />
                             </View>
 
@@ -487,7 +533,10 @@ const ReportIssuesScreen = ({ navigation }) => {
                                     onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
                                 >
                                     <Text style={[styles.dropdownText, !category && styles.placeholderText]}>
-                                        {category ? category.replace('_', ' ') : 'Select category'}
+                                        {category
+                                            ? categories.find(cat => cat.value === category)?.label || category
+                                            : 'Select category'
+                                        }
                                     </Text>
                                     <Icon name="arrow-drop-down" size={24} color="#6b7280" />
                                 </TouchableOpacity>
@@ -496,14 +545,25 @@ const ReportIssuesScreen = ({ navigation }) => {
                                     <View style={styles.dropdown}>
                                         {categories.map((cat) => (
                                             <TouchableOpacity
-                                                key={cat}
-                                                style={styles.dropdownItem}
+                                                key={cat.value}
+                                                style={[
+                                                    styles.dropdownItem,
+                                                    category === cat.value && styles.dropdownItemSelected
+                                                ]}
                                                 onPress={() => {
-                                                    setCategory(cat);
+                                                    setCategory(cat.value);
                                                     setShowCategoryDropdown(false);
                                                 }}
                                             >
-                                                <Text style={styles.dropdownItemText}>{cat.replace('_', ' ')}</Text>
+                                                <Text style={[
+                                                    styles.dropdownItemText,
+                                                    category === cat.value && styles.dropdownItemTextSelected
+                                                ]}>
+                                                    {cat.label}
+                                                </Text>
+                                                {category === cat.value && (
+                                                    <Icon name="check" size={20} color="#1e3a8a" />
+                                                )}
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -511,19 +571,29 @@ const ReportIssuesScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Location</Text>
+                                <Text style={styles.inputLabel}>Location *</Text>
                                 <TouchableOpacity
-                                    style={styles.locationButton}
+                                    style={[
+                                        styles.locationButton,
+                                        location && styles.locationButtonActive
+                                    ]}
                                     onPress={getCurrentLocation}
                                     disabled={gettingLocation}
                                 >
                                     {gettingLocation ? (
                                         <ActivityIndicator size="small" color="#1e3a8a" />
                                     ) : (
-                                        <Icon name="my-location" size={20} color="#1e3a8a" />
+                                        <Icon
+                                            name={location ? "check-circle" : "my-location"}
+                                            size={20}
+                                            color={location ? "#10b981" : "#1e3a8a"}
+                                        />
                                     )}
-                                    <Text style={styles.locationButtonText}>
-                                        {location ? 'Location Captured' : 'Get Current Location'}
+                                    <Text style={[
+                                        styles.locationButtonText,
+                                        location && styles.locationButtonTextActive
+                                    ]}>
+                                        {location ? 'Location Captured ✓' : 'Get Current Location'}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -535,7 +605,18 @@ const ReportIssuesScreen = ({ navigation }) => {
                                     onPress={selectImage}
                                 >
                                     {issueImage ? (
-                                        <Image source={{ uri: issueImage.uri }} style={styles.selectedImage} />
+                                        <View style={styles.imagePreviewContainer}>
+                                            <Image
+                                                source={{ uri: issueImage.uri }}
+                                                style={styles.selectedImage}
+                                            />
+                                            <TouchableOpacity
+                                                style={styles.removeImageButton}
+                                                onPress={() => setIssueImage(null)}
+                                            >
+                                                <Icon name="close" size={16} color="#ffffff" />
+                                            </TouchableOpacity>
+                                        </View>
                                     ) : (
                                         <>
                                             <Icon name="add-a-photo" size={24} color="#1e3a8a" />
@@ -568,6 +649,7 @@ const ReportIssuesScreen = ({ navigation }) => {
                     </View>
                 </View>
             </Modal>
+
             <CustomModal
                 {...modalConfig}
                 onClose={hideModal}
@@ -608,9 +690,9 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         paddingHorizontal: 20,
-        paddingVertical: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
+        paddingTop: 16,
+        paddingBottom: 16,
+        backgroundColor: '#ffffff',
     },
     sectionTitle: {
         fontSize: 24,
@@ -665,15 +747,18 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 16,
     },
-    emptyListContainer: {
+    emptyWrapper: {
+        flex: 1,
+    },
+    emptyContentContainer: {
         flexGrow: 1,
-        justifyContent: 'center',
     },
     emptyContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 80,
         paddingHorizontal: 40,
+        paddingBottom: 100,
     },
     emptyTitle: {
         fontSize: 20,
@@ -891,11 +976,20 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#f1f5f9',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    dropdownItemSelected: {
+        backgroundColor: '#eff6ff',
     },
     dropdownItemText: {
         fontSize: 16,
         color: '#1e293b',
-        textTransform: 'capitalize',
+    },
+    dropdownItemTextSelected: {
+        color: '#1e3a8a',
+        fontWeight: '600',
     },
     locationButton: {
         borderWidth: 1,
@@ -907,11 +1001,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#ffffff',
     },
+    locationButtonActive: {
+        borderColor: '#10b981',
+        backgroundColor: '#f0fdf4',
+    },
     locationButtonText: {
         fontSize: 16,
         color: '#1e3a8a',
         marginLeft: 8,
         fontWeight: '500',
+    },
+    locationButtonTextActive: {
+        color: '#10b981',
     },
     imageButton: {
         borderWidth: 2,
@@ -928,11 +1029,38 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontWeight: '500',
     },
+    imagePreviewContainer: {
+        position: 'relative',
+        width: '100%',
+        alignItems: 'center',
+    },
     selectedImage: {
-        width: 100,
-        height: 100,
+        width: '100%',
+        height: 200,
         borderRadius: 8,
         resizeMode: 'cover',
+    },
+    removeImageButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: '#ef4444',
+        borderRadius: 16,
+        width: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
     submitButton: {
         marginTop: 20,
@@ -955,5 +1083,4 @@ const styles = StyleSheet.create({
         color: '#ffffff',
     },
 });
-
 export default ReportIssuesScreen;

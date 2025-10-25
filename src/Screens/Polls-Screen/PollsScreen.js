@@ -15,6 +15,34 @@ import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
 import { useGetpollsQuery, usePostvotepollMutation } from '../../Redux/apiSlice';
 
+
+// Sections Changed:
+
+// sectionHeader style (line ~570)
+
+// ❌ Removed: paddingVertical: 24 and borderBottomWidth
+// ✅ Changed to: paddingTop: 16 and paddingBottom: 16
+// Added backgroundColor: '#ffffff'
+
+
+// emptyContainer style (line ~615)
+
+// ❌ Removed: paddingVertical: 80
+// ✅ Changed to: flex: 1 with paddingBottom: 100
+
+
+// emptyListContainer → emptyContentContainer
+
+// Renamed and simplified the style
+
+
+// FlatList Configuration (line ~385)
+
+// Changed ListEmptyComponent to wrap both header and empty state
+// This prevents the large gap between header and empty state
+
+
+
 const PollScreen = ({ navigation }) => {
     const {
         data: pollsData,
