@@ -102,9 +102,6 @@ export const api = createApi({
             }),
             invalidatesTags: ['LostFound'],
         }),
-
-
-
         issuesReportedbyme: builder.query({
             query: () => '/report/issues/reported-by-me',
             providesTags: ['Issues'],
@@ -144,6 +141,14 @@ export const api = createApi({
             }),
             invalidatesTags: ['Polls'],
         }),
+        posthelpboard: builder.mutation({
+            query: (data) => ({
+                url: '/helpboard',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['HelpBoard'],
+        }),
     }),
 });
 
@@ -167,4 +172,5 @@ export const {
     usePostIssuesMutation,
     usePrefetch,
     usePostvotepollMutation,
+    usePosthelpboardMutation,
 } = api;

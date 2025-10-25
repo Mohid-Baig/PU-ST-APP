@@ -22,6 +22,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
+import { usePosthelpboardMutation, useGethelpboardQuery } from '../../Redux/apiSlice';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,6 +48,7 @@ const HelpBoardScreen = ({ navigation }) => {
     const commentInputRefs = useRef({});
     const flatListRef = useRef(null);
     const commentsFlatListRef = useRef(null);
+    const [posthelpboard] = usePosthelpboardMutation();
 
     const categories = [
         { id: 'academic', label: 'Academic Help', icon: 'school' },
@@ -205,7 +208,6 @@ const HelpBoardScreen = ({ navigation }) => {
         setTitle('');
         setMessage('');
         setCategory('academic');
-        setContactInfo('');
         setIsAnonymous(false);
         setShowCategoryDropdown(false);
     };
@@ -313,7 +315,6 @@ const HelpBoardScreen = ({ navigation }) => {
                     title,
                     message,
                     category,
-                    contactInfo,
                     isAnonymous,
                     likes: 0,
                     liked: false,
@@ -449,12 +450,6 @@ const HelpBoardScreen = ({ navigation }) => {
                     {item.message}
                 </Text>
 
-                {item.contactInfo && (
-                    <View style={styles.contactInfo}>
-                        <Icon name="contact-mail" size={16} color="#64748b" />
-                        <Text style={styles.contactText}>{item.contactInfo}</Text>
-                    </View>
-                )}
 
                 <View style={styles.cardFooter}>
                     <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
@@ -711,15 +706,6 @@ const HelpBoardScreen = ({ navigation }) => {
                                         />
                                     </View>
 
-                                    <View style={styles.inputGroup}>
-                                        <Text style={styles.inputLabel}>Contact Information</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="How should people contact you?"
-                                            value={contactInfo}
-                                            onChangeText={setContactInfo}
-                                        />
-                                    </View>
 
                                     <View style={styles.inputGroup}>
                                         <View style={styles.switchRow}>
