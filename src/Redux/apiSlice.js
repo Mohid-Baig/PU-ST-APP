@@ -108,6 +108,14 @@ export const api = createApi({
         }),
         gethelpboard: builder.query({
             query: () => '/helpboard',
+            providesTags: ['HelpBoard'],
+        }),
+        addhelpboardpostlike: builder.mutation({
+            query: (postId) => ({
+                url: `/helpboard/${postId}/like`,
+                method: 'PUT',
+            }),
+            invalidatesTags: ['HelpBoard'],
         }),
         getfeedback: builder.query({
             query: () => '/feedback',
@@ -165,6 +173,7 @@ export const {
     useMatchLostFoundMutation,
     useIssuesReportedbymeQuery,
     useGethelpboardQuery,
+    useAddhelpboardpostlikeMutation,
     useGetfeedbackQuery,
     useGeteventsQuery,
     useGetanonymousQuery,
