@@ -16,13 +16,14 @@ import {
     FlatList,
     KeyboardAvoidingView,
     Keyboard,
-    ScrollView
+    ScrollView,
+    Animated
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomModal from '../../Components/Customs/CustomModal';
 import useModal from '../../Components/Customs/UseModalHook';
-import { usePosthelpboardMutation, useGethelpboardQuery, useAddhelpboardpostlikeMutation } from '../../Redux/apiSlice';
+import { usePosthelpboardMutation, useGethelpboardQuery, useAddhelpboardpostlikeMutation, usePosthelpboardcommentMutation } from '../../Redux/apiSlice';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,6 +38,9 @@ const HelpBoardScreen = ({ navigation }) => {
     const [commentsModalVisible, setCommentsModalVisible] = useState(false);
     const [currentPostForComments, setCurrentPostForComments] = useState(null);
 
+    const [optimisticLikes, setOptimisticLikes] = useState({});
+    const [likeAnimations] = useState({});
+
     const commentInputRefs = useRef({});
     const flatListRef = useRef(null);
     const commentsFlatListRef = useRef(null);
@@ -49,6 +53,7 @@ const HelpBoardScreen = ({ navigation }) => {
         isLoading: helpboardLoading,
         refetch: refetchPosts,
     } = useGethelpboardQuery();
+    const [addhelpboardcomment] = usePosthelpboardcommentMutation();
 
     const {
         modalConfig,
@@ -60,6 +65,13 @@ const HelpBoardScreen = ({ navigation }) => {
 
     const posts = helpboardData?.posts || [];
     const hasRealError = helpboardError && helpboardError.status !== 404;
+
+    const getLikeAnimation = (postId) => {
+        if (!likeAnimations[postId]) {
+            likeAnimations[postId] = new Animated.Value(1);
+        }
+        return likeAnimations[postId];
+    };
 
     const handleCloseModal = () => {
         setModalVisible(false);
@@ -92,10 +104,74 @@ const HelpBoardScreen = ({ navigation }) => {
 
     const handleLikePost = async (postId) => {
         try {
-            const response = await addhelpboardpostlike(postId).unwrap();
-            console.log('✅ Like API Response:', response);
+            const currentPosts = helpboardData?.posts || [];
+            const post = currentPosts.find(p => p._id === postId);
+            if (!post) return;
+
+            const animation = getLikeAnimation(postId);
+            Animated.sequence([
+                Animated.timing(animation, {
+                    toValue: 1.3,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(animation, {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+
+            setOptimisticLikes(prev => {
+                const currentOptimistic = prev[postId];
+
+                const wasLiked = currentOptimistic?.likedByMe ?? post.likedByMe;
+                const currentLikeCount = currentOptimistic?.likeCount ?? post.likeCount;
+
+                const newLikeCount = wasLiked ?
+                    Math.max(0, (currentLikeCount - 1)) :
+                    (currentLikeCount + 1);
+                const newLikedStatus = !wasLiked;
+
+                return {
+                    ...prev,
+                    [postId]: {
+                        likedByMe: newLikedStatus,
+                        likeCount: newLikeCount,
+                        timestamp: Date.now()
+                    }
+                };
+            });
+
+            addhelpboardpostlike(postId)
+                .unwrap()
+                .then(() => {
+                    console.log(`✅ Like API successful for post ${postId} (background)`);
+                    setTimeout(() => {
+                        setOptimisticLikes(prev => {
+                            const currentOptimistic = prev[postId];
+                            if (currentOptimistic && currentOptimistic.timestamp <= Date.now() - 500) {
+                                const newState = { ...prev };
+                                delete newState[postId];
+                                return newState;
+                            }
+                            return prev;
+                        });
+                    }, 1000);
+                })
+                .catch((err) => {
+                    console.log(`❌ Like API failed for post ${postId}:`, err);
+                    setTimeout(() => {
+                        setOptimisticLikes(prev => {
+                            const newState = { ...prev };
+                            delete newState[postId];
+                            return newState;
+                        });
+                    }, 1000);
+                });
+
         } catch (err) {
-            console.log('❌ Error liking post:', err);
+            console.log('❌ Error in like process:', err);
         }
     };
 
@@ -124,14 +200,63 @@ const HelpBoardScreen = ({ navigation }) => {
         try {
             console.log('Submit comment:', commentText, 'for post:', postId);
 
-            setCommentTexts(prev => ({ ...prev, [postId]: '' }));
-            setSubmittingComments(prev => ({ ...prev, [postId]: false }));
+            const optimisticComment = {
+                _id: `temp_${Date.now()}`,
+                user: {
+                    fullName: 'You',
+                    profileImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+                },
+                message: commentText,
+                createdAt: new Date().toISOString()
+            };
 
-            showSuccess('Success', 'Comment posted successfully!');
+            if (currentPostForComments && currentPostForComments._id === postId) {
+                const updatedPost = {
+                    ...currentPostForComments,
+                    replies: [...(currentPostForComments.replies || []), optimisticComment]
+                };
+                setCurrentPostForComments(updatedPost);
+
+                setTimeout(() => {
+                    if (commentsFlatListRef.current) {
+                        commentsFlatListRef.current.scrollToEnd({ animated: true });
+                    }
+                }, 100);
+            }
+
+            setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+
+            addhelpboardcomment({
+                postId,
+                message: commentText
+            })
+                .unwrap()
+                .then(() => {
+                    console.log('✅ Comment API successful');
+                    refetchPosts();
+                    showSuccess('Success', 'Comment posted successfully!');
+                })
+                .catch((error) => {
+                    console.log('❌ Error submitting comment:', error);
+
+                    if (currentPostForComments && currentPostForComments._id === postId) {
+                        const revertedPost = {
+                            ...currentPostForComments,
+                            replies: currentPostForComments.replies.filter(
+                                reply => !reply._id.startsWith('temp_')
+                            )
+                        };
+                        setCurrentPostForComments(revertedPost);
+                    }
+
+                    showError('Error', 'Failed to post comment. Please try again.');
+                });
+
         } catch (error) {
-            console.log('Error submitting comment:', error);
+            console.log('❌ Unexpected error:', error);
+            showError('Error', 'Something went wrong');
+        } finally {
             setSubmittingComments(prev => ({ ...prev, [postId]: false }));
-            showError('Error', 'Failed to post comment');
         }
     };
 
@@ -203,16 +328,21 @@ const HelpBoardScreen = ({ navigation }) => {
     };
 
     const renderComment = ({ item }) => (
-        <View style={styles.commentItem}>
+        <View style={[
+            styles.commentItem,
+            item._id?.startsWith('temp_') && styles.optimisticComment
+        ]}>
             <Image
                 source={{
-                    uri: item.user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+                    uri: item.user?.profileImageUrl || item.user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
                 }}
                 style={styles.commentAvatar}
             />
             <View style={styles.commentContent}>
                 <View style={styles.commentHeader}>
-                    <Text style={styles.commentUserName}>{item.user?.name || 'User'}</Text>
+                    <Text style={styles.commentUserName}>
+                        {item.user?.fullName || item.user?.name || 'User'}
+                    </Text>
                     <Text style={styles.commentTime}>{formatDate(item.createdAt)}</Text>
                 </View>
                 <Text style={styles.commentText}>{item.message}</Text>
@@ -221,6 +351,12 @@ const HelpBoardScreen = ({ navigation }) => {
     );
 
     const renderPostCard = ({ item }) => {
+        const optimisticData = optimisticLikes[item._id];
+        const animation = getLikeAnimation(item._id);
+
+        const isLiked = optimisticData?.likedByMe ?? item.likedByMe;
+        const likeCount = optimisticData?.likeCount ?? item.likeCount;
+
         return (
             <View style={styles.issueCard}>
                 <View style={styles.cardHeader}>
@@ -263,15 +399,26 @@ const HelpBoardScreen = ({ navigation }) => {
                         <TouchableOpacity
                             style={styles.actionButton}
                             onPress={() => handleLikePost(item._id)}
+                            activeOpacity={0.7}
                         >
-                            <Icon
-                                name={item.likedByMe ? 'favorite' : 'favorite-border'}
-                                size={20}
-                                color={item.likedByMe ? '#ef4444' : '#64748b'}
-                            />
-                            <Text style={[styles.actionText, item.likedByMe && styles.likedText]}>
-                                {item.likeCount || 0}
-                            </Text>
+                            <Animated.View style={{
+                                transform: [{ scale: animation }],
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}>
+                                <Icon
+                                    name={isLiked ? 'favorite' : 'favorite-border'}
+                                    size={20}
+                                    color={isLiked ? '#ef4444' : '#64748b'}
+                                />
+                                <Text style={[
+                                    styles.actionText,
+                                    isLiked && styles.likedText,
+                                    optimisticData && styles.optimisticText
+                                ]}>
+                                    {likeCount || 0}
+                                </Text>
+                            </Animated.View>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -343,7 +490,7 @@ const HelpBoardScreen = ({ navigation }) => {
                             ref={commentsFlatListRef}
                             data={currentPostForComments.replies || []}
                             renderItem={renderComment}
-                            keyExtractor={(item, index) => item._id || index.toString()}
+                            keyExtractor={(item, index) => item._id || `comment-${index}`}
                             contentContainerStyle={styles.commentsListContainer}
                             showsVerticalScrollIndicator={false}
                             ListEmptyComponent={
@@ -664,7 +811,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingBottom: 100,
     },
-    // UPDATED CARD DESIGN - Matching ReportIssuesScreen
+    // UPDATED CARD DESIGN
     issueCard: {
         backgroundColor: '#ffffff',
         borderRadius: 16,
@@ -760,6 +907,13 @@ const styles = StyleSheet.create({
     },
     likedText: {
         color: '#ef4444',
+    },
+    // ✅ NEW STYLES FOR OPTIMISTIC UPDATES
+    optimisticText: {
+        fontWeight: '700',
+    },
+    optimisticComment: {
+        opacity: 0.8,
     },
     fab: {
         position: 'absolute',

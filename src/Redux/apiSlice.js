@@ -115,6 +115,47 @@ export const api = createApi({
                 url: `/helpboard/${postId}/like`,
                 method: 'PUT',
             }),
+            onQueryStarted: async (postId, { dispatch, queryFulfilled, getState }) => {
+                const authState = getState().auth;
+                const currentUserId = authState?.user?._id || authState?.user?.id;
+
+                if (!currentUserId) return;
+
+                const patchResult = dispatch(
+                    api.util.updateQueryData('gethelpboard', undefined, (draft) => {
+                        if (!draft.posts) return;
+
+                        const post = draft.posts.find(p => p._id === postId);
+                        if (!post) return;
+
+                        const wasLiked = post.likedByMe;
+                        post.likedByMe = !wasLiked;
+                        post.likeCount = wasLiked ?
+                            Math.max(0, post.likeCount - 1) :
+                            post.likeCount + 1;
+
+                        if (wasLiked) {
+                            post.likes = (post.likes || []).filter(
+                                likeId => likeId?.toString() !== currentUserId.toString()
+                            );
+                        } else {
+                            if (!post.likes) post.likes = [];
+                            const alreadyInArray = post.likes.some(
+                                likeId => likeId?.toString() === currentUserId.toString()
+                            );
+                            if (!alreadyInArray) {
+                                post.likes.push(currentUserId);
+                            }
+                        }
+                    })
+                );
+
+                try {
+                    await queryFulfilled;
+                } catch {
+                    patchResult.undo();
+                }
+            },
             invalidatesTags: ['HelpBoard'],
         }),
         getfeedback: builder.query({
@@ -142,18 +183,27 @@ export const api = createApi({
             invalidatesTags: ['Issues'],
         }),
         postvotepoll: builder.mutation({
-            query: ({ pollId, optionId }) => ({
+            query: ({ pollId, optionIndex }) => ({
                 url: `/polls/${pollId}/vote`,
                 method: 'POST',
-                body: { optionId },
+                body: { optionIndex },
             }),
             invalidatesTags: ['Polls'],
         }),
+
         posthelpboard: builder.mutation({
             query: (data) => ({
                 url: '/helpboard',
                 method: 'POST',
                 body: data,
+            }),
+            invalidatesTags: ['HelpBoard'],
+        }),
+        posthelpboardcomment: builder.mutation({
+            query: ({ postId, message }) => ({
+                url: `/helpboard/${postId}/reply`,
+                method: 'POST',
+                body: { message },
             }),
             invalidatesTags: ['HelpBoard'],
         }),
@@ -182,4 +232,5 @@ export const {
     usePrefetch,
     usePostvotepollMutation,
     usePosthelpboardMutation,
+    usePosthelpboardcommentMutation,
 } = api;

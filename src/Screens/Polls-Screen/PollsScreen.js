@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Text,
@@ -16,30 +16,6 @@ import useModal from '../../Components/Customs/UseModalHook';
 import { useGetpollsQuery, usePostvotepollMutation } from '../../Redux/apiSlice';
 
 
-// Sections Changed:
-
-// sectionHeader style (line ~570)
-
-// ❌ Removed: paddingVertical: 24 and borderBottomWidth
-// ✅ Changed to: paddingTop: 16 and paddingBottom: 16
-// Added backgroundColor: '#ffffff'
-
-
-// emptyContainer style (line ~615)
-
-// ❌ Removed: paddingVertical: 80
-// ✅ Changed to: flex: 1 with paddingBottom: 100
-
-
-// emptyListContainer → emptyContentContainer
-
-// Renamed and simplified the style
-
-
-// FlatList Configuration (line ~385)
-
-// Changed ListEmptyComponent to wrap both header and empty state
-// This prevents the large gap between header and empty state
 
 
 
@@ -50,6 +26,8 @@ const PollScreen = ({ navigation }) => {
         isLoading: pollsLoading,
         refetch: refetchPolls
     } = useGetpollsQuery();
+
+    console.log(pollsData)
 
     const [votePoll] = usePostvotepollMutation();
 
@@ -62,8 +40,16 @@ const PollScreen = ({ navigation }) => {
     } = useModal();
 
     const handleVote = async (pollId, optionIndex) => {
+        console.log("Voting for pollId:", pollId, "optionIndex:", optionIndex, typeof optionIndex);
+
         try {
+            console.log('Sending vote payload:', {
+                pollId,
+                optionIndex,
+                type: typeof optionIndex,
+            });
             await votePoll({ pollId, optionIndex }).unwrap();
+
             refetchPolls();
             showSuccess('Success', 'Vote recorded successfully!');
         } catch (error) {
@@ -71,6 +57,8 @@ const PollScreen = ({ navigation }) => {
             showError('Error', error?.data?.message || 'Failed to record vote. Please try again.');
         }
     };
+
+
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -108,8 +96,9 @@ const PollScreen = ({ navigation }) => {
     };
 
     const getTotalVotes = (poll) => {
-        return poll.votes?.reduce((sum, vote) => sum + vote, 0) || 0;
+        return poll.options?.reduce((sum, option) => sum + (option.votes || 0), 0);
     };
+
 
     const renderPollCard = ({ item }) => {
         const expired = isExpired(item.expiresAt);
@@ -137,7 +126,7 @@ const PollScreen = ({ navigation }) => {
 
                 <View style={styles.optionsContainer}>
                     {item.options.map((option, index) => {
-                        const votes = item.votes?.[index] || 0;
+                        const votes = option.votes;
                         const percentage = calculatePercentage(votes, totalVotes);
                         const isSelected = item.selectedOption === index;
 
@@ -158,7 +147,7 @@ const PollScreen = ({ navigation }) => {
                                             <View style={[styles.progressBar, { width: `${percentage}%` }]} />
                                             <View style={styles.optionTextContainer}>
                                                 <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
-                                                    {option}
+                                                    {option.text}
                                                 </Text>
                                                 <Text style={styles.percentageText}>{percentage}%</Text>
                                             </View>
@@ -168,13 +157,14 @@ const PollScreen = ({ navigation }) => {
                                             <View style={styles.radioButton}>
                                                 <View style={styles.radioButtonInner} />
                                             </View>
-                                            <Text style={styles.optionText}>{option}</Text>
+                                            <Text style={styles.optionText}>{option.text}</Text>
                                         </View>
                                     )}
                                 </View>
                             </TouchableOpacity>
                         );
                     })}
+
                 </View>
 
                 <View style={styles.pollFooter}>
